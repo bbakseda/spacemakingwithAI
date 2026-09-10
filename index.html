@@ -38,10 +38,10 @@
       
       <!-- 건물 / 야외 탭 -->
       <div class="flex items-center bg-[#222222] p-0.5 rounded border border-[#444444]">
-        <button id="tabBldg" class="px-3 py-1 text-xs font-semibold rounded bg-[#444444] text-white flex items-center gap-1 transition">
+        <button id="tabBldg" class="px-3 py-1 text-xs font-bold rounded bg-[#444444] text-white flex items-center gap-1 transition shadow cursor-pointer">
           🏢 건물 설계
         </button>
-        <button id="tabOut" class="px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition">
+        <button id="tabOut" class="px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer">
           🌳 야외/조경 설계
         </button>
       </div>
@@ -58,41 +58,82 @@
   <!-- 2. 상단 보조 제어 툴바 (건물, 층, 실행취소, 배경, 3D, 저장) -->
   <nav class="h-10 bg-[#3a3a3a] border-b border-[#2b2b2b] px-3 flex items-center justify-between flex-shrink-0 text-xs text-white z-20">
     <div class="flex items-center gap-3">
-      <!-- 건물 드롭다운 -->
-      <div class="flex items-center gap-1.5">
-        <span class="text-slate-300">건물:</span>
-        <select id="selBuilding" class="bg-[#2b2b2b] border border-[#555] rounded px-2 py-1 text-xs font-bold text-white focus:outline-none">
-          <option value="본관">본관</option>
-          <option value="별관">별관</option>
-          <option value="체육관">체육관/강당</option>
-        </select>
-        <button id="btnAddBuilding" class="bg-[#555555] hover:bg-[#666666] text-white text-[11px] px-2 py-1 rounded border border-[#666]">
-          +건물추가
+      <!-- 🏢 건물 모드 전용 컨트롤 그룹 -->
+      <div id="navBldgControls" class="flex items-center gap-3">
+        <!-- 건물 드롭다운 -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-300">건물:</span>
+          <select id="selBuilding" class="bg-[#2b2b2b] border border-[#555] rounded px-2 py-1 text-xs font-bold text-white focus:outline-none">
+            <option value="본관">본관</option>
+            <option value="별관">별관</option>
+            <option value="체육관">체육관/강당</option>
+          </select>
+          <button id="btnAddBuilding" class="bg-[#555555] hover:bg-[#666666] text-white text-[11px] px-2 py-1 rounded border border-[#666]">
+            +건물추가
+          </button>
+        </div>
+
+        <span class="text-slate-500">|</span>
+
+        <!-- 층 선택 라디오버튼 -->
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-slate-300">층:</span>
+          <label class="flex items-center gap-1 cursor-pointer">
+            <input type="radio" name="floor" value="1" checked class="accent-indigo-500" /> 1F
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer">
+            <input type="radio" name="floor" value="2" class="accent-indigo-500" /> 2F
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer">
+            <input type="radio" name="floor" value="3" class="accent-indigo-500" /> 3F
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer">
+            <input type="radio" name="floor" value="4" class="accent-indigo-500" /> 4F
+          </label>
+        </div>
+
+        <span class="text-slate-500">|</span>
+
+        <!-- 배경 도면 사진 로드 & 투명도 & 삭제 -->
+        <div class="flex items-center gap-1.5 bg-[#2b2b2b] px-2 py-0.5 rounded border border-[#444]">
+          <button id="btnLoadBg" class="bg-[#00695C] hover:bg-[#00796B] text-white font-semibold px-2 py-0.5 rounded text-xs flex items-center gap-1 cursor-pointer">
+            🖼 배경 도면 로드
+          </button>
+          <input type="file" id="fileBgInput" accept="image/*" class="hidden" />
+          <button id="btnSampleBg" class="bg-[#37474F] hover:bg-[#455A64] text-amber-300 text-[11px] px-2 py-0.5 rounded cursor-pointer" title="사용자 업로드 학교 체육관 도면 사진 적용">
+            샘플도면 불러오기
+          </button>
+          <label class="flex items-center gap-1 text-[11px] text-slate-300 ml-1">
+            <span>투명도:</span>
+            <input type="range" id="bgOpacitySlider" min="0" max="100" value="60" class="w-16 h-1 accent-teal-400 cursor-pointer" />
+            <span id="bgOpacityLabel" class="w-7 text-right">60%</span>
+          </label>
+          <button id="btnToggleBg" class="text-[11px] text-teal-300 hover:underline cursor-pointer">숨김</button>
+          <span class="text-slate-600">|</span>
+          <button id="btnDeleteBg" class="bg-[#c0392b] hover:bg-[#e74c3c] text-white text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer shadow transition" title="현재 배경 도면 완전 삭제">
+            🗑️ 도면 삭제
+          </button>
+        </div>
+
+        <!-- ✨ AI 도면인식 & 공간재구조화 버튼 -->
+        <button id="btnGeminiAi" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-3 py-1 rounded text-xs shadow flex items-center gap-1.5">
+          <span>✨ Gemini AI 도면인식 & 재배치</span>
         </button>
       </div>
 
-      <span class="text-slate-500">|</span>
-
-      <!-- 층 선택 라디오버튼 -->
-      <div class="flex items-center gap-2 text-xs">
-        <span class="text-slate-300">층:</span>
-        <label class="flex items-center gap-1 cursor-pointer">
-          <input type="radio" name="floor" value="1" checked class="accent-indigo-500" /> 1F
-        </label>
-        <label class="flex items-center gap-1 cursor-pointer">
-          <input type="radio" name="floor" value="2" class="accent-indigo-500" /> 2F
-        </label>
-        <label class="flex items-center gap-1 cursor-pointer">
-          <input type="radio" name="floor" value="3" class="accent-indigo-500" /> 3F
-        </label>
-        <label class="flex items-center gap-1 cursor-pointer">
-          <input type="radio" name="floor" value="4" class="accent-indigo-500" /> 4F
-        </label>
+      <!-- 🌳 야외 모드 전용 컨트롤 그룹 -->
+      <div id="navOutControls" class="hidden flex items-center gap-3">
+        <span class="bg-[#1C2833] text-emerald-300 font-bold px-3 py-1 rounded border border-emerald-700/60 flex items-center gap-1.5 text-xs shadow-inner">
+          <span class="text-sm">🌳</span> [ 야외 캠퍼스 / 조경 설계 모드 ]
+        </span>
+        <span class="text-slate-300 text-xs">
+          운동장, 트랙, 조경, 화단, 연못, 휴게시설을 자유롭게 설계하세요
+        </span>
       </div>
 
       <span class="text-slate-500">|</span>
 
-      <!-- 취소 / 복구 -->
+      <!-- 공통: 취소 / 복구 -->
       <div class="flex items-center gap-1">
         <button id="btnUndo" class="bg-[#555] hover:bg-[#666] text-white px-2 py-1 rounded text-xs flex items-center gap-1">
           ↩ 취소
@@ -101,30 +142,6 @@
           ↪ 복구
         </button>
       </div>
-
-      <span class="text-slate-500">|</span>
-
-      <!-- 배경 도면 사진 로드 & 투명도 -->
-      <div class="flex items-center gap-1.5 bg-[#2b2b2b] px-2 py-0.5 rounded border border-[#444]">
-        <button id="btnLoadBg" class="bg-[#00695C] hover:bg-[#00796B] text-white font-semibold px-2 py-0.5 rounded text-xs flex items-center gap-1">
-          🖼 배경 도면 로드
-        </button>
-        <input type="file" id="fileBgInput" accept="image/*" class="hidden" />
-        <button id="btnSampleBg" class="bg-[#37474F] hover:bg-[#455A64] text-amber-300 text-[11px] px-2 py-0.5 rounded" title="사용자 업로드 학교 체육관 도면 사진 적용">
-          샘플도면 불러오기
-        </button>
-        <label class="flex items-center gap-1 text-[11px] text-slate-300 ml-1">
-          <span>투명도:</span>
-          <input type="range" id="bgOpacitySlider" min="0" max="100" value="60" class="w-16 h-1 accent-teal-400" />
-          <span id="bgOpacityLabel" class="w-7 text-right">60%</span>
-        </label>
-        <button id="btnToggleBg" class="text-[11px] text-teal-300 hover:underline">숨김</button>
-      </div>
-
-      <!-- ✨ AI 도면인식 & 공간재구조화 버튼 -->
-      <button id="btnGeminiAi" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-3 py-1 rounded text-xs shadow flex items-center gap-1.5">
-        <span>✨ Gemini AI 도면인식 & 재배치</span>
-      </button>
     </div>
 
     <!-- 우측 액션 버튼 (저장, 3D 보기) -->
@@ -141,52 +158,108 @@
   <!-- 3. 메인 작업 영역 (좌측 팔레트 + 중앙 CAD 캔버스) -->
   <div class="flex-1 flex overflow-hidden relative">
 
-    <!-- [좌측 사이드바] 공간/교실 추가 팔레트 (폭 160px) -->
-    <aside class="w-44 bg-[#1f1f1f] border-r border-[#333] p-2.5 flex flex-col gap-1.5 flex-shrink-0 z-10 overflow-y-auto">
-      <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
-        공간 모듈 추가
+    <!-- [좌측 사이드바] 공간/기물 추가 팔레트 (폭 180px) -->
+    <aside class="w-48 bg-[#1f1f1f] border-r border-[#333] p-2.5 flex flex-col gap-1.5 flex-shrink-0 z-10 overflow-y-auto">
+      <!-- 🏢 건물 패널 -->
+      <div id="panelBldg" class="flex flex-col gap-1.5">
+        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+          공간 모듈 추가
+        </div>
+
+        <!-- 기본 교실 프리셋 버튼들 (원작 CAD 스펙 완벽 일치) -->
+        <button id="btnAddNormal" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+          <span>+ 일반교실</span>
+          <span class="text-[10px] text-slate-400">900×750</span>
+        </button>
+
+        <button id="btnAddSpecial" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+          <span>+ 특별실</span>
+          <span class="text-[10px] text-slate-400">1200×900</span>
+        </button>
+
+        <button id="btnAddHallway" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+          <span>+ 복도</span>
+          <span class="text-[10px] text-slate-400">1000×240</span>
+        </button>
+
+        <button id="btnAddRestroom" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+          <span>+ 화장실</span>
+          <span class="text-[10px] text-slate-400">500×750</span>
+        </button>
+
+        <button id="btnAddStairs" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+          <span>+ 계단</span>
+          <span class="text-[10px] text-slate-400">400×700</span>
+        </button>
+
+        <hr class="border-[#333] my-1" />
+
+        <!-- 직접 만들기 버튼 (원작 CAD의 녹색 버튼) -->
+        <button id="btnAddCustom" class="w-full py-2.5 px-3 bg-[#27ae60] hover:bg-[#219653] text-white text-xs font-bold rounded text-center transition shadow leading-tight">
+          + 직접 만들기<br><span class="text-[10px] font-normal">(치수 / 색상)</span>
+        </button>
       </div>
 
-      <!-- 기본 교실 프리셋 버튼들 (원작 CAD 스펙 완벽 일치) -->
-      <button id="btnAddNormal" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
-        <span>+ 일반교실</span>
-        <span class="text-[10px] text-slate-400">900×750</span>
-      </button>
+      <!-- 🌳 야외 / 조경 패널 (기본 숨김) -->
+      <div id="panelOut" class="hidden flex flex-col gap-1.5">
+        <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-1 px-1 flex items-center gap-1">
+          <span>🌳</span> 야외 기물 프리셋
+        </div>
 
-      <button id="btnAddSpecial" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
-        <span>+ 특별실</span>
-        <span class="text-[10px] text-slate-400">1200×900</span>
-      </button>
+        <button id="btnAddTrack" class="w-full py-2 px-3 bg-[#34495E] hover:bg-[#415b76] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#4a627a]">
+          <span>+ 운동장 트랙</span>
+          <span class="text-[10px] text-amber-300">4000×2000</span>
+        </button>
 
-      <button id="btnAddHallway" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
-        <span>+ 복도</span>
-        <span class="text-[10px] text-slate-400">1000×240</span>
-      </button>
+        <button id="btnAddSoccer" class="w-full py-2 px-3 bg-[#34495E] hover:bg-[#415b76] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#4a627a]">
+          <span>+ 축구장</span>
+          <span class="text-[10px] text-emerald-300">3000×1500</span>
+        </button>
 
-      <button id="btnAddRestroom" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
-        <span>+ 화장실</span>
-        <span class="text-[10px] text-slate-400">500×750</span>
-      </button>
+        <button id="btnAddBasketball" class="w-full py-2 px-3 bg-[#34495E] hover:bg-[#415b76] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#4a627a]">
+          <span>+ 농구장</span>
+          <span class="text-[10px] text-orange-300">2800×1500</span>
+        </button>
 
-      <button id="btnAddStairs" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
-        <span>+ 계단</span>
-        <span class="text-[10px] text-slate-400">400×700</span>
-      </button>
+        <button id="btnAddGarden" class="w-full py-2 px-3 bg-[#34495E] hover:bg-[#415b76] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#4a627a]">
+          <span>+ 정원/화단</span>
+          <span class="text-[10px] text-purple-300">500×500</span>
+        </button>
 
-      <hr class="border-[#333] my-1" />
+        <button id="btnAddPond" class="w-full py-2 px-3 bg-[#34495E] hover:bg-[#415b76] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#4a627a]">
+          <span>+ 연못</span>
+          <span class="text-[10px] text-sky-300">400×400</span>
+        </button>
 
-      <!-- 직접 만들기 버튼 (원작 CAD의 녹색 버튼) -->
-      <button id="btnAddCustom" class="w-full py-2.5 px-3 bg-[#27ae60] hover:bg-[#219653] text-white text-xs font-bold rounded text-center transition shadow leading-tight">
-        + 직접 만들기<br><span class="text-[10px] font-normal">(치수 / 색상)</span>
-      </button>
+        <button id="btnAddTree" class="w-full py-2 px-3 bg-[#34495E] hover:bg-[#415b76] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#4a627a]">
+          <span>+ 큰 나무</span>
+          <span class="text-[10px] text-emerald-400">200×200</span>
+        </button>
+
+        <button id="btnAddBench" class="w-full py-2 px-3 bg-[#34495E] hover:bg-[#415b76] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#4a627a]">
+          <span>+ 벤치</span>
+          <span class="text-[10px] text-amber-500">180×60</span>
+        </button>
+
+        <button id="btnAddBleachers" class="w-full py-2 px-3 bg-[#34495E] hover:bg-[#415b76] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#4a627a]">
+          <span>+ 스탠드/관람석</span>
+          <span class="text-[10px] text-slate-300">1200×400</span>
+        </button>
+
+        <hr class="border-[#333] my-1" />
+
+        <button id="btnAddCustomOut" class="w-full py-2.5 px-3 bg-[#117A65] hover:bg-[#148f77] text-white text-xs font-bold rounded text-center transition shadow leading-tight">
+          + 직접 만들기<br><span class="text-[10px] font-normal">(야외 치수 / 색상)</span>
+        </button>
+      </div>
 
       <!-- 하단 조작 가이드 -->
       <div class="mt-auto bg-[#292929] p-2.5 rounded border border-[#3a3a3a] text-[11px] text-slate-400 space-y-1">
         <div class="font-bold text-slate-300">⌨️ 단축키 안내</div>
-        <div>• 좌클릭: 방 선택 및 이동</div>
+        <div>• 좌클릭: 방/기물 선택 및 이동</div>
         <div>• <span class="text-pink-400 font-semibold">자석 스냅</span>: 모서리 자동정렬</div>
-        <div>• <span class="text-cyan-400 font-semibold">우클릭</span>: 내부 가구 꾸미기</div>
-        <div>• Delete: 선택된 방 삭제</div>
+        <div>• <span class="text-cyan-400 font-semibold">우클릭</span>: 세부 기물 꾸미기</div>
+        <div>• Delete: 선택된 객체 삭제</div>
         <div>• Ctrl+Z: 취소 | Ctrl+S: 저장</div>
       </div>
     </aside>
@@ -230,44 +303,84 @@
       </div>
 
       <div class="flex-1 flex overflow-hidden">
-        <!-- 좌측 가구 목록 팔레트 (폭 180px) -->
-        <div class="w-48 bg-white border-r border-slate-300 p-3 flex flex-col gap-1.5 overflow-y-auto flex-shrink-0">
-          <div class="text-xs font-bold text-slate-700 pb-1 border-b border-slate-200 mb-1">
-            [가구 / 기물 배치]
+        <!-- 좌측 가구/기물 목록 팔레트 (폭 200px) -->
+        <div class="w-52 bg-white border-r border-slate-300 p-3 flex flex-col gap-1.5 overflow-y-auto flex-shrink-0">
+          <div class="flex items-center bg-slate-200 p-0.5 rounded text-[11px] font-bold mb-1">
+            <button id="tabFurnIndoor" class="flex-1 py-1 text-center rounded bg-white text-slate-800 shadow-xs cursor-pointer">실내 가구</button>
+            <button id="tabFurnOutdoor" class="flex-1 py-1 text-center rounded text-slate-500 hover:text-slate-800 cursor-pointer">야외 시설</button>
           </div>
 
-          <button onclick="addFurniture('책상', 60, 40, 70, '#8D6E63')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
-            <span>+ 책상</span>
-            <span class="text-[10px] text-slate-500">60×40</span>
-          </button>
-          <button onclick="addFurniture('의자', 40, 40, 45, '#D7CCC8')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
-            <span>+ 의자</span>
-            <span class="text-[10px] text-slate-500">40×40</span>
-          </button>
-          <button onclick="addFurniture('칠판', 200, 20, 120, '#546E7A')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
-            <span>+ 칠판</span>
-            <span class="text-[10px] text-slate-500">200×20</span>
-          </button>
-          <button onclick="addFurniture('사물함', 40, 40, 180, '#FFCC80')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
-            <span>+ 사물함</span>
-            <span class="text-[10px] text-slate-500">40×40</span>
-          </button>
-          <button onclick="addFurniture('교탁', 80, 50, 90, '#81C784')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
-            <span>+ 교탁</span>
-            <span class="text-[10px] text-slate-500">80×50</span>
-          </button>
-          <button onclick="addFurniture('TV', 150, 10, 100, '#29B6F6')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
-            <span>+ TV</span>
-            <span class="text-[10px] text-slate-500">150×10</span>
-          </button>
-          <button onclick="addFurniture('문', 90, 15, 210, '#81C784')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
-            <span>+ 문</span>
-            <span class="text-[10px] text-slate-500">90×15</span>
-          </button>
-          <button onclick="addFurniture('창문', 120, 10, 150, '#81D4FA')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
-            <span>+ 창문</span>
-            <span class="text-[10px] text-slate-500">120×10</span>
-          </button>
+          <!-- 실내 가구 목록 -->
+          <div id="furnListIndoor" class="flex flex-col gap-1.5">
+            <button onclick="addFurniture('책상', 60, 40, 70, '#8D6E63')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 책상</span>
+              <span class="text-[10px] text-slate-500">60×40</span>
+            </button>
+            <button onclick="addFurniture('의자', 40, 40, 45, '#D7CCC8')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 의자</span>
+              <span class="text-[10px] text-slate-500">40×40</span>
+            </button>
+            <button onclick="addFurniture('칠판', 200, 20, 120, '#546E7A')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 칠판</span>
+              <span class="text-[10px] text-slate-500">200×20</span>
+            </button>
+            <button onclick="addFurniture('사물함', 40, 40, 180, '#FFCC80')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 사물함</span>
+              <span class="text-[10px] text-slate-500">40×40</span>
+            </button>
+            <button onclick="addFurniture('교탁', 80, 50, 90, '#81C784')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 교탁</span>
+              <span class="text-[10px] text-slate-500">80×50</span>
+            </button>
+            <button onclick="addFurniture('TV', 150, 10, 100, '#29B6F6')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ TV</span>
+              <span class="text-[10px] text-slate-500">150×10</span>
+            </button>
+            <button onclick="addFurniture('문', 90, 15, 210, '#81C784')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 문</span>
+              <span class="text-[10px] text-slate-500">90×15</span>
+            </button>
+            <button onclick="addFurniture('창문', 120, 10, 150, '#81D4FA')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 창문</span>
+              <span class="text-[10px] text-slate-500">120×10</span>
+            </button>
+          </div>
+
+          <!-- 야외 시설물 목록 -->
+          <div id="furnListOutdoor" class="hidden flex flex-col gap-1.5">
+            <button onclick="addFurniture('축구골대', 300, 100, 150, '#FFFFFF')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 축구골대</span>
+              <span class="text-[10px] text-slate-500">300×100</span>
+            </button>
+            <button onclick="addFurniture('농구골대', 180, 120, 305, '#E67E22')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 농구골대</span>
+              <span class="text-[10px] text-slate-500">180×120</span>
+            </button>
+            <button onclick="addFurniture('가로등', 40, 40, 350, '#F1C40F')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 가로등</span>
+              <span class="text-[10px] text-slate-500">40×40</span>
+            </button>
+            <button onclick="addFurniture('조경나무', 100, 100, 300, '#27AE60')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 조경나무</span>
+              <span class="text-[10px] text-slate-500">100×100</span>
+            </button>
+            <button onclick="addFurniture('공원벤치', 180, 60, 50, '#BA4A00')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 공원벤치</span>
+              <span class="text-[10px] text-slate-500">180×60</span>
+            </button>
+            <button onclick="addFurniture('분수대', 150, 150, 80, '#3498DB')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 분수대</span>
+              <span class="text-[10px] text-slate-500">150×150</span>
+            </button>
+            <button onclick="addFurniture('파고라/그늘막', 300, 300, 250, '#8E44AD')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 그늘막/파고라</span>
+              <span class="text-[10px] text-slate-500">300×300</span>
+            </button>
+            <button onclick="addFurniture('화단모듈', 100, 100, 40, '#E91E63')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+              <span>+ 화단모듈</span>
+              <span class="text-[10px] text-slate-500">100×100</span>
+            </button>
+          </div>
 
           <hr class="my-1 border-slate-300" />
           <button id="btnFurnitureCustom" class="py-2 px-2 bg-[#27ae60] hover:bg-[#219653] text-white rounded text-xs font-bold text-center shadow">
@@ -392,10 +505,19 @@
       "교탁": [80, 50, 90, "#81C784"],
       "TV": [150, 10, 100, "#29B6F6"],
       "문": [90, 15, 210, "#81C784"],
-      "창문": [120, 10, 150, "#81D4FA"]
+      "창문": [120, 10, 150, "#81D4FA"],
+      // 야외 시설물
+      "축구골대": [300, 100, 150, "#FFFFFF"],
+      "농구골대": [180, 120, 305, "#E67E22"],
+      "가로등": [40, 40, 350, "#F1C40F"],
+      "조경나무": [100, 100, 300, "#27AE60"],
+      "공원벤치": [180, 60, 50, "#BA4A00"],
+      "분수대": [150, 150, 80, "#3498DB"],
+      "파고라/그늘막": [300, 300, 250, "#8E44AD"],
+      "화단모듈": [100, 100, 40, "#E91E63"]
     };
 
-    // 데이터 구조 (건물/층별 관리)
+    // 데이터 구조 (건물/층별 관리 + 야외 조경 캠퍼스)
     let appData = {
       buildings: {
         "본관": {
@@ -416,7 +538,18 @@
         "별관": { 1: [], 2: [], 3: [], 4: [] },
         "체육관": { 1: [], 2: [] }
       },
-      outdoor: []
+      outdoor: [
+        { id: 201, type: "out", name: "운동장 트랙", w: 4000, h: 2000, x: 500, y: 500, color: "#E59866", contents: [
+          { name: "축구골대", x: 150, y: 950, w: 300, h: 100, color: "#FFFFFF" },
+          { name: "축구골대", x: 3550, y: 950, w: 300, h: 100, color: "#FFFFFF" }
+        ], selected: false },
+        { id: 202, type: "out", name: "축구장", w: 3000, h: 1500, x: 1000, y: 750, color: "#27AE60", contents: [], selected: false },
+        { id: 203, type: "out", name: "농구장", w: 1500, h: 900, x: 500, y: 2700, color: "#D35400", contents: [], selected: false },
+        { id: 204, type: "out", name: "정원/화단", w: 800, h: 600, x: 4800, y: 500, color: "#AF7AC5", contents: [], selected: false },
+        { id: 205, type: "out", name: "연못", w: 500, h: 500, x: 4800, y: 1300, color: "#5DADE2", contents: [], selected: false },
+        { id: 206, type: "out", name: "큰 나무", w: 200, h: 200, x: 4800, y: 2000, color: "#229954", contents: [], selected: false },
+        { id: 207, type: "out", name: "벤치", w: 180, h: 60, x: 5100, y: 2050, color: "#BA4A00", contents: [], selected: false }
+      ]
     };
 
     let currentMode = "bldg"; // "bldg" | "outdoor"
@@ -487,8 +620,8 @@
       const rect = canvasWrapper.getBoundingClientRect();
       ctx.clearRect(0, 0, rect.width, rect.height);
 
-      // 1. 다크 배경 채우기
-      ctx.fillStyle = COLOR_BG;
+      // 1. 다크/야외 테마 배경 채우기
+      ctx.fillStyle = (currentMode === "bldg") ? COLOR_BG : "#243342";
       ctx.fillRect(0, 0, rect.width, rect.height);
 
       // 2. 배경 도면 사진 렌더링 (배경 로드 시)
@@ -506,7 +639,7 @@
       // 3. CAD 그리드 그리기 (_draw_grid)
       drawGrid();
 
-      // 4. 교실/공간 렌더링
+      // 4. 교실/공간/야외 기물 렌더링
       const rooms = (currentMode === "bldg")
         ? (appData.buildings[currentBldg][currentFloor] || [])
         : appData.outdoor;
@@ -518,29 +651,30 @@
         const h = r.h * scale;
         const isSel = (r.id === selectedRoomId);
 
-        // 방 본체 사각형 채우기
-        ctx.fillStyle = r.color || COLOR_ROOM_BG;
+        // 본체 사각형 채우기
+        ctx.fillStyle = r.color || (currentMode === "bldg" ? COLOR_ROOM_BG : "#34495E");
         ctx.fillRect(x, y, w, h);
 
         // 테두리 선 (선택 시 COLOR_SELECT 하늘색, 일반 시 흰색)
-        ctx.strokeStyle = isSel ? COLOR_SELECT : COLOR_ROOM_LINE;
+        ctx.strokeStyle = isSel ? COLOR_SELECT : (currentMode === "bldg" ? COLOR_ROOM_LINE : "#ffffff");
         ctx.lineWidth = isSel ? 3 : 1.5;
         ctx.strokeRect(x, y, w, h);
 
-        // 방 중앙 텍스트 (녹색 COLOR_TEXT)
-        ctx.fillStyle = COLOR_TEXT;
+        // 중앙 텍스트 (건물 모드는 원작 녹색, 야외 모드는 백색)
+        ctx.fillStyle = (currentMode === "bldg") ? COLOR_TEXT : "#FFFFFF";
         ctx.font = "bold 13px 'Malgun Gothic', sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(r.name, x + w / 2, y + h / 2 - 8);
         ctx.font = "11px Arial, sans-serif";
+        ctx.fillStyle = (currentMode === "bldg") ? COLOR_TEXT : "#e0e0e0";
         ctx.fillText(`${r.w}x${r.h}`, x + w / 2, y + h / 2 + 10);
 
-        // 내부 배치된 가구 힌트 표시 (가구가 있을 경우)
+        // 내부 배치된 가구/기물 힌트 표시
         if (r.contents && r.contents.length > 0) {
-          ctx.fillStyle = "#888888";
+          ctx.fillStyle = (currentMode === "bldg") ? "#888888" : "#f1c40f";
           ctx.font = "10px sans-serif";
-          ctx.fillText(`📦 가구 ${r.contents.length}개 배치됨`, x + w / 2, y + h - 14);
+          ctx.fillText(`📦 기물 ${r.contents.length}개`, x + w / 2, y + h - 14);
         }
 
         // 5. 노란색 치수선 화살표 드로잉 (_draw_dims)
@@ -567,7 +701,7 @@
       const rect = canvasWrapper.getBoundingClientRect();
       const step = 100 * scale; // 100cm = 1m 단위
 
-      ctx.strokeStyle = COLOR_GRID;
+      ctx.strokeStyle = (currentMode === "bldg") ? COLOR_GRID : "#34495E";
       ctx.lineWidth = 1;
 
       const startX = panOffset.x % step;
@@ -838,7 +972,7 @@
 
       const newRoom = {
         id: Date.now(),
-        type: "room",
+        type: (currentMode === "bldg") ? "room" : "out",
         name: name,
         w: w,
         h: h,
@@ -858,22 +992,81 @@
       redraw();
     }
 
-    document.getElementById('btnAddNormal').onclick = () => addRoom("일반교실", 900, 750);
-    document.getElementById('btnAddSpecial').onclick = () => addRoom("특별실", 1200, 900);
-    document.getElementById('btnAddHallway').onclick = () => addRoom("복도", 1000, 240);
-    document.getElementById('btnAddRestroom').onclick = () => addRoom("화장실", 500, 750);
-    document.getElementById('btnAddStairs').onclick = () => addRoom("계단", 400, 700);
+    // 모드 전환 함수 (🏢 건물 설계 <-> 🌳 야외/조경 설계)
+    function switchMode(mode) {
+      currentMode = mode;
+      const tabBldg = document.getElementById('tabBldg');
+      const tabOut = document.getElementById('tabOut');
+      const panelBldg = document.getElementById('panelBldg');
+      const panelOut = document.getElementById('panelOut');
+      const navBldgControls = document.getElementById('navBldgControls');
+      const navOutControls = document.getElementById('navOutControls');
 
-    // 직접 만들기 다이얼로그
+      if (mode === 'bldg') {
+        tabBldg.className = "px-3 py-1 text-xs font-bold rounded bg-[#444444] text-white flex items-center gap-1 transition shadow cursor-pointer";
+        tabOut.className = "px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer";
+        panelBldg.classList.remove('hidden');
+        panelOut.classList.add('hidden');
+        navBldgControls.classList.remove('hidden');
+        navOutControls.classList.add('hidden');
+        canvasWrapper.style.backgroundColor = COLOR_BG;
+      } else {
+        tabOut.className = "px-3 py-1 text-xs font-bold rounded bg-[#2E4053] text-emerald-300 border border-emerald-600/50 flex items-center gap-1 transition shadow cursor-pointer";
+        tabBldg.className = "px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer";
+        panelBldg.classList.add('hidden');
+        panelOut.classList.remove('hidden');
+        navBldgControls.classList.add('hidden');
+        navOutControls.classList.remove('hidden');
+        canvasWrapper.style.backgroundColor = "#243342";
+      }
+      selectedRoomId = null;
+      document.getElementById('txtSelectedInfo').innerText = "선택: 없음";
+      redraw();
+    }
+
+    document.getElementById('tabBldg').onclick = () => switchMode('bldg');
+    document.getElementById('tabOut').onclick = () => switchMode('outdoor');
+
+    // 건물 프리셋 버튼들
+    document.getElementById('btnAddNormal').onclick = () => addRoom("일반교실", 900, 750, COLOR_ROOM_BG);
+    document.getElementById('btnAddSpecial').onclick = () => addRoom("특별실", 1200, 900, COLOR_ROOM_BG);
+    document.getElementById('btnAddHallway').onclick = () => addRoom("복도", 1000, 240, COLOR_ROOM_BG);
+    document.getElementById('btnAddRestroom').onclick = () => addRoom("화장실", 500, 750, COLOR_ROOM_BG);
+    document.getElementById('btnAddStairs').onclick = () => addRoom("계단", 400, 700, COLOR_ROOM_BG);
+
+    // 야외 프리셋 버튼들
+    document.getElementById('btnAddTrack').onclick = () => addRoom("운동장 트랙", 4000, 2000, "#E59866");
+    document.getElementById('btnAddSoccer').onclick = () => addRoom("축구장", 3000, 1500, "#27AE60");
+    document.getElementById('btnAddBasketball').onclick = () => addRoom("농구장", 2800, 1500, "#D35400");
+    document.getElementById('btnAddGarden').onclick = () => addRoom("정원/화단", 500, 500, "#AF7AC5");
+    document.getElementById('btnAddPond').onclick = () => addRoom("연못", 400, 400, "#5DADE2");
+    document.getElementById('btnAddTree').onclick = () => addRoom("큰 나무", 200, 200, "#229954");
+    document.getElementById('btnAddBench').onclick = () => addRoom("벤치", 180, 60, "#BA4A00");
+    document.getElementById('btnAddBleachers').onclick = () => addRoom("스탠드/관람석", 1200, 400, "#7F8C8D");
+
+    // 직접 만들기 다이얼로그 (건물 & 야외)
     const customDialog = document.getElementById('customDialog');
     document.getElementById('btnAddCustom').onclick = () => {
+      document.getElementById('customDialogTitle').innerText = "사용자 정의 공간 만들기";
+      document.getElementById('customName').value = "새공간";
+      document.getElementById('customW').value = "900";
+      document.getElementById('customH').value = "750";
+      document.getElementById('customColor').value = "#121212";
+      customDialog.classList.remove('hidden');
+    };
+    document.getElementById('btnAddCustomOut').onclick = () => {
+      document.getElementById('customDialogTitle').innerText = "야외 기물 / 조경 만들기";
+      document.getElementById('customName').value = "야외기물";
+      document.getElementById('customW').value = "500";
+      document.getElementById('customH').value = "500";
+      document.getElementById('customColor').value = "#27AE60";
       customDialog.classList.remove('hidden');
     };
     document.getElementById('btnCancelCustom').onclick = () => customDialog.classList.add('hidden');
     document.getElementById('btnOkCustom').onclick = () => {
       const name = document.getElementById('customName').value.trim() || "새공간";
-      const w = parseInt(document.getElementById('customW').value) || 900;
-      const h = parseInt(document.getElementById('customH').value) || 750;
+      const w = parseInt(document.getElementById('customW').value) || 500;
+      const h = parseInt(document.getElementById('customH').value) || 500;
       const color = document.getElementById('customColor').value;
       addRoom(name, w, h, color);
       customDialog.classList.add('hidden');
@@ -935,6 +1128,20 @@
       redraw();
     });
 
+    // 배경 도면 완전 삭제
+    const btnDeleteBg = document.getElementById('btnDeleteBg');
+    btnDeleteBg.addEventListener('click', () => {
+      if (!bgImage) {
+        alert("현재 로드된 배경 도면이 없습니다.");
+        return;
+      }
+      if (confirm("배경 도면을 삭제하시겠습니까?\n(언제든 [샘플도면 불러오기]나 [배경 도면 로드]로 다시 추가할 수 있습니다)")) {
+        bgImage = null;
+        fileBgInput.value = "";
+        redraw();
+      }
+    });
+
     // ---------------------------------------------------------
     // RoomEditor 내부 꾸미기 (파이썬 RoomEditor 완벽 이식)
     // ---------------------------------------------------------
@@ -948,10 +1155,34 @@
 
     function openRoomEditor(room) {
       editingRoom = room;
-      document.getElementById('roomEditorTitle').innerText = `내부 꾸미기 - ${room.name} (${room.w}×${room.h}cm)`;
+      const isOut = (room.type === 'out' || currentMode === 'outdoor');
+      document.getElementById('roomEditorTitle').innerText = isOut
+        ? `야외 기물 세부 배치 - ${room.name} (${room.w}×${room.h}cm)`
+        : `내부 꾸미기 - ${room.name} (${room.w}×${room.h}cm)`;
+      showFurnTab(isOut ? 'outdoor' : 'indoor');
       roomEditorModal.classList.remove('hidden');
       drawRoomEditor();
     }
+
+    function showFurnTab(tab) {
+      const tabIndoor = document.getElementById('tabFurnIndoor');
+      const tabOutdoor = document.getElementById('tabFurnOutdoor');
+      const listIndoor = document.getElementById('furnListIndoor');
+      const listOutdoor = document.getElementById('furnListOutdoor');
+      if (tab === 'indoor') {
+        tabIndoor.className = "flex-1 py-1 text-center rounded bg-white text-slate-800 shadow-xs font-bold cursor-pointer";
+        tabOutdoor.className = "flex-1 py-1 text-center rounded text-slate-500 hover:text-slate-800 font-normal cursor-pointer";
+        listIndoor.classList.remove('hidden');
+        listOutdoor.classList.add('hidden');
+      } else {
+        tabOutdoor.className = "flex-1 py-1 text-center rounded bg-white text-slate-800 shadow-xs font-bold cursor-pointer";
+        tabIndoor.className = "flex-1 py-1 text-center rounded text-slate-500 hover:text-slate-800 font-normal cursor-pointer";
+        listOutdoor.classList.remove('hidden');
+        listIndoor.classList.add('hidden');
+      }
+    }
+    document.getElementById('tabFurnIndoor').onclick = () => showFurnTab('indoor');
+    document.getElementById('tabFurnOutdoor').onclick = () => showFurnTab('outdoor');
 
     document.getElementById('btnCloseRoomEditor').onclick = () => {
       roomEditorModal.classList.add('hidden');
@@ -963,7 +1194,7 @@
       if (!editingRoom) return;
       rCtx.clearRect(0, 0, roomEditorCanvas.width, roomEditorCanvas.height);
 
-      // 교실 벽면 비율에 맞춘 스케일
+      // 객체 비율에 맞춘 스케일
       const pad = 40;
       const availW = roomEditorCanvas.width - pad * 2;
       const availH = roomEditorCanvas.height - pad * 2;
@@ -971,8 +1202,9 @@
       const ox = (roomEditorCanvas.width - editingRoom.w * rScale) / 2;
       const oy = (roomEditorCanvas.height - editingRoom.h * rScale) / 2;
 
-      // 교실 바닥
-      rCtx.fillStyle = "#f9f9f9";
+      // 바닥 렌더링
+      const isOut = (editingRoom.type === 'out' || currentMode === 'outdoor');
+      rCtx.fillStyle = isOut ? (editingRoom.color ? editingRoom.color + "22" : "#f1f8e9") : "#f9f9f9";
       rCtx.fillRect(ox, oy, editingRoom.w * rScale, editingRoom.h * rScale);
 
       // 교실 벽 테두리
@@ -1130,44 +1362,111 @@
       const gridHelper = new THREE.GridHelper(10000, 100, 0x444444, 0x2a2a2a);
       threeScene.add(gridHelper);
 
-      // 현재 건물의 모든 층 3D 렌더링
-      const bldgData = appData.buildings[currentBldg];
-      Object.keys(bldgData).forEach(floorNum => {
-        const floorRooms = bldgData[floorNum];
-        const floorHeight = 320; // 층고 3.2m
-        const baseElevation = (parseInt(floorNum) - 1) * floorHeight;
+      if (currentMode === "bldg") {
+        // 현재 건물의 모든 층 3D 렌더링
+        const bldgData = appData.buildings[currentBldg];
+        Object.keys(bldgData).forEach(floorNum => {
+          const floorRooms = bldgData[floorNum];
+          const floorHeight = 320; // 층고 3.2m
+          const baseElevation = (parseInt(floorNum) - 1) * floorHeight;
 
-        floorRooms.forEach(r => {
-          // 방 3D 박스
-          const geo = new THREE.BoxGeometry(r.w, floorHeight, r.h);
+          floorRooms.forEach(r => {
+            // 방 3D 박스
+            const geo = new THREE.BoxGeometry(r.w, floorHeight, r.h);
+            const mat = new THREE.MeshLambertMaterial({
+              color: (r.name.includes("교실") ? 0x2e7d32 : r.name.includes("특별") ? 0x1565c0 : 0x424242),
+              transparent: true,
+              opacity: 0.65
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(r.x + r.w / 2, baseElevation + floorHeight / 2, r.y + r.h / 2);
+            mesh.castShadow = true;
+            threeScene.add(mesh);
+
+            // 외곽 와이어프레임 선
+            const wire = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xffffff }));
+            wire.position.copy(mesh.position);
+            threeScene.add(wire);
+
+            // 내부 가구 3D 렌더링
+            if (r.contents) {
+              r.contents.forEach(f => {
+                const fH = f.height3d || 70;
+                let fCol = 0x8D6E63;
+                if (f.color) {
+                  try { fCol = parseInt(f.color.replace('#', '0x'), 16); } catch (e) {}
+                }
+                const fGeo = new THREE.BoxGeometry(f.w, fH, f.h);
+                const fMat = new THREE.MeshLambertMaterial({ color: fCol });
+                const fMesh = new THREE.Mesh(fGeo, fMat);
+                fMesh.position.set(r.x + f.x + f.w / 2, baseElevation + fH / 2 + 2, r.y + f.y + f.h / 2);
+                threeScene.add(fMesh);
+              });
+            }
+          });
+        });
+        threeCamera.position.set(1500, 2000, 2000);
+        threeControls.target.set(1500, 150, 1500);
+      } else {
+        // 🌳 야외 캠퍼스 조경 3D 렌더링 (원작 school_cad_v20 알고리즘)
+        const outList = appData.outdoor;
+        outList.forEach(obj => {
+          let h = 50;
+          let opacity = 0.85;
+          let colorNum = 0x27AE60;
+          if (obj.color) {
+            try { colorNum = parseInt(obj.color.replace('#', '0x'), 16); } catch (e) {}
+          }
+
+          const name = obj.name;
+          if (name.includes("트랙") || name.includes("축구장") || name.includes("농구장") || name.includes("화단") || name.includes("연못")) {
+            h = 8;
+            opacity = 0.95;
+          } else if (name.includes("나무")) {
+            h = 400;
+            opacity = 0.9;
+          } else if (name.includes("벤치")) {
+            h = 60;
+          } else if (name.includes("스탠드") || name.includes("관람석")) {
+            h = 140;
+          } else if (name.includes("동상") || name.includes("기물")) {
+            h = 200;
+          }
+
+          const geo = new THREE.BoxGeometry(obj.w, h, obj.h);
           const mat = new THREE.MeshLambertMaterial({
-            color: (r.name.includes("교실") ? 0x2e7d32 : r.name.includes("특별") ? 0x1565c0 : 0x424242),
-            transparent: true,
-            opacity: 0.65
+            color: colorNum,
+            transparent: opacity < 1.0,
+            opacity: opacity
           });
           const mesh = new THREE.Mesh(geo, mat);
-          mesh.position.set(r.x + r.w / 2, baseElevation + floorHeight / 2, r.y + r.h / 2);
+          mesh.position.set(obj.x + obj.w / 2, h / 2, obj.y + obj.h / 2);
           mesh.castShadow = true;
           threeScene.add(mesh);
 
-          // 외곽 와이어프레임 선
-          const wire = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xffffff }));
+          const wire = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
           wire.position.copy(mesh.position);
           threeScene.add(wire);
 
-          // 내부 가구 3D 렌더링
-          if (r.contents) {
-            r.contents.forEach(f => {
-              const fH = f.height3d || 70;
+          if (obj.contents) {
+            obj.contents.forEach(f => {
+              const fH = f.height3d || 60;
+              let fCol = 0xBA4A00;
+              if (f.color) {
+                try { fCol = parseInt(f.color.replace('#', '0x'), 16); } catch (e) {}
+              }
               const fGeo = new THREE.BoxGeometry(f.w, fH, f.h);
-              const fMat = new THREE.MeshLambertMaterial({ color: f.color || 0x8D6E63 });
+              const fMat = new THREE.MeshLambertMaterial({ color: fCol });
               const fMesh = new THREE.Mesh(fGeo, fMat);
-              fMesh.position.set(r.x + f.x + f.w / 2, baseElevation + fH / 2 + 2, r.y + f.y + f.h / 2);
+              fMesh.position.set(obj.x + f.x + f.w / 2, h + fH / 2, obj.y + f.y + f.h / 2);
               threeScene.add(fMesh);
             });
           }
         });
-      });
+
+        threeCamera.position.set(3000, 3500, 3500);
+        threeControls.target.set(2800, 0, 1800);
+      }
 
       function animate() {
         if (!document.getElementById('modal3D').classList.contains('hidden')) {
