@@ -144,12 +144,15 @@
       </div>
     </div>
 
-    <!-- 우측 액션 버튼 (저장, 3D 보기) -->
+    <!-- 우측 액션 버튼 (그림파일 저장, 프로젝트 저장, 3D 보기) -->
     <div class="flex items-center gap-2">
-      <button id="btnSaveProj" class="bg-[#E67E22] hover:bg-[#D35400] text-white font-bold px-3.5 py-1 rounded text-xs flex items-center gap-1 shadow">
-        💾 저장
+      <button id="btnExportImage" class="bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-bold px-3 py-1 rounded text-xs flex items-center gap-1 shadow cursor-pointer transition" title="현재 도면을 고해상도 PNG 그림 파일로 저장">
+        📸 도면 그림(PNG) 저장
       </button>
-      <button id="btnView3D" class="bg-[#283593] hover:bg-[#1A237E] text-white font-bold px-3.5 py-1 rounded text-xs flex items-center gap-1 shadow">
+      <button id="btnSaveProj" class="bg-[#E67E22] hover:bg-[#D35400] text-white font-bold px-3 py-1 rounded text-xs flex items-center gap-1 shadow cursor-pointer transition" title="프로젝트를 JSON 파일로 저장">
+        💾 프로젝트(JSON) 저장
+      </button>
+      <button id="btnView3D" class="bg-[#283593] hover:bg-[#1A237E] text-white font-bold px-3 py-1 rounded text-xs flex items-center gap-1 shadow cursor-pointer transition">
         🧊 3D 보기
       </button>
     </div>
@@ -297,9 +300,14 @@
       <!-- 헤더 -->
       <div class="h-10 bg-[#333] px-4 flex items-center justify-between flex-shrink-0 text-white">
         <span id="roomEditorTitle" class="text-sm font-bold">내부 꾸미기 - 일반교실 (900×750cm)</span>
-        <button id="btnCloseRoomEditor" class="px-3 py-1 bg-[#555] hover:bg-[#666] text-xs font-semibold rounded">
-          닫기
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="btnCaptureRoomEditor" class="px-2.5 py-1 bg-[#2e7d32] hover:bg-[#1b5e20] text-xs font-bold rounded text-white flex items-center gap-1 cursor-pointer transition" title="내부 배치도 PNG 그림 저장">
+            📸 배치도 저장
+          </button>
+          <button id="btnCloseRoomEditor" class="px-3 py-1 bg-[#555] hover:bg-[#666] text-xs font-semibold rounded cursor-pointer">
+            닫기
+          </button>
+        </div>
       </div>
 
       <div class="flex-1 flex overflow-hidden">
@@ -409,9 +417,14 @@
         <span>Green Smart School 3D 입체 투시도</span>
         <span class="text-xs font-normal text-slate-400 ml-2">마우스 좌클릭 회전 | 우클릭 패닝 | 휠 줌</span>
       </div>
-      <button id="btnClose3D" class="px-3 py-1 bg-[#444] hover:bg-[#555] rounded text-xs font-bold text-white">
-        ✕ 3D 뷰어 닫기
-      </button>
+      <div class="flex items-center gap-2">
+        <button id="btnCapture3D" class="px-3 py-1 bg-[#2e7d32] hover:bg-[#1b5e20] rounded text-xs font-bold text-white flex items-center gap-1 cursor-pointer transition" title="3D 화면 PNG 그림 저장">
+          📸 3D 뷰 캡처 저장
+        </button>
+        <button id="btnClose3D" class="px-3 py-1 bg-[#444] hover:bg-[#555] rounded text-xs font-bold text-white cursor-pointer">
+          ✕ 3D 뷰어 닫기
+        </button>
+      </div>
     </div>
     <div id="threeContainer" class="flex-1 w-full h-full relative"></div>
   </div>
@@ -1530,6 +1543,88 @@
       a.remove();
     }
     document.getElementById('btnSaveProj').onclick = saveProject;
+
+    // 📸 1. 도면 그림(PNG) 파일 저장
+    function exportDrawingImage() {
+      // 선택 하이라이트 박스를 잠시 숨겨서 정갈한 최종 도면으로 출력
+      const prevSelected = selectedRoomId;
+      selectedRoomId = null;
+      redraw();
+
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = canvas.width;
+      exportCanvas.height = canvas.height;
+      const expCtx = exportCanvas.getContext('2d');
+
+      // 현재 CAD 캔버스 내용 복사
+      expCtx.drawImage(canvas, 0, 0);
+
+      // 건축 도면 표제란 (우측 하단)
+      const dpr = window.devicePixelRatio || 1;
+      const boxW = 350 * dpr;
+      const boxH = 68 * dpr;
+      const boxX = exportCanvas.width - boxW - (16 * dpr);
+      const boxY = exportCanvas.height - boxH - (16 * dpr);
+
+      expCtx.fillStyle = "rgba(18, 18, 18, 0.94)";
+      expCtx.fillRect(boxX, boxY, boxW, boxH);
+      expCtx.strokeStyle = "#4CAF50";
+      expCtx.lineWidth = 1.5 * dpr;
+      expCtx.strokeRect(boxX, boxY, boxW, boxH);
+
+      expCtx.fillStyle = "#ffffff";
+      expCtx.font = `bold ${12 * dpr}px 'Malgun Gothic', sans-serif`;
+      const titleStr = (currentMode === "bldg")
+        ? `[도면] 그린스마트스쿨 ${currentBldg} (${currentFloor}F)`
+        : `[도면] 그린스마트스쿨 야외/조경 캠퍼스`;
+      expCtx.fillText(titleStr, boxX + (12 * dpr), boxY + (24 * dpr));
+
+      expCtx.fillStyle = "#a0aec0";
+      expCtx.font = `${10 * dpr}px 'Malgun Gothic', sans-serif`;
+      const dateStr = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      expCtx.fillText(`일자: ${dateStr} | 스케일: 1cm = ${scale.toFixed(2)}px | CAD V19`, boxX + (12 * dpr), boxY + (46 * dpr));
+
+      // 선택 상태 복원
+      selectedRoomId = prevSelected;
+      redraw();
+
+      // PNG 다운로드 트리거
+      const filename = (currentMode === "bldg")
+        ? `그린스마트스쿨_${currentBldg}_${currentFloor}층_도면_${new Date().toISOString().slice(0, 10)}.png`
+        : `그린스마트스쿨_야외캠퍼스_도면_${new Date().toISOString().slice(0, 10)}.png`;
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = exportCanvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+    document.getElementById('btnExportImage').onclick = exportDrawingImage;
+
+    // 📸 2. 3D 뷰 캡처 저장
+    document.getElementById('btnCapture3D').onclick = () => {
+      if (!threeRenderer || !threeScene || !threeCamera) return;
+      threeRenderer.render(threeScene, threeCamera);
+      const dataUrl = threeRenderer.domElement.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `그린스마트스쿨_3D투시도_${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    };
+
+    // 📸 3. 내부 배치도 캡처 저장
+    document.getElementById('btnCaptureRoomEditor').onclick = () => {
+      if (!editingRoom) return;
+      const dataUrl = roomEditorCanvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `내부배치도_${editingRoom.name}_${editingRoom.w}x${editingRoom.h}cm.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    };
 
     // 줌/리셋 버튼
     document.getElementById('btnZoomIn').onclick = () => { scale = Math.min(1.5, scale * 1.2); redraw(); };
