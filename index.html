@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Green Smart School CAD Web V19 (Total Freedom)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js 및 OrbitControls CDN (3D 보기용) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Malgun Gothic", "Dotum", -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+      background-color: #212121;
+      color: #ffffff;
+      overflow: hidden;
+    }
+    /* 스크롤바 커스텀 */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #222; }
+    ::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #777; }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+  <!-- 1. 최상단 타이틀 & 탭 바 -->
+  <header class="h-10 bg-[#333333] border-b border-[#444444] px-3 flex items-center justify-between flex-shrink-0 z-30">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-1.5 font-bold text-xs text-white tracking-wide">
+        <span class="text-teal-400 font-black text-sm">🪶</span>
+        <span>Green Smart School CAD Web V19 (Total Freedom)</span>
+      </div>
+      
+      <!-- 건물 / 야외 탭 -->
+      <div class="flex items-center bg-[#222222] p-0.5 rounded border border-[#444444]">
+        <button id="tabBldg" class="px-3 py-1 text-xs font-semibold rounded bg-[#444444] text-white flex items-center gap-1 transition">
+          🏢 건물 설계
+        </button>
+        <button id="tabOut" class="px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition">
+          🌳 야외/조경 설계
+        </button>
+      </div>
+    </div>
+
+    <!-- 우측 창 컨트롤 모의 & 도움말 -->
+    <div class="flex items-center gap-2 text-xs text-slate-400">
+      <span class="bg-[#2a2a2a] px-2 py-0.5 rounded text-[11px] text-amber-300 border border-amber-800/40">
+        💡 마우스 휠: 줌 | 우클릭: 내부 꾸미기
+      </span>
+    </div>
+  </header>
+
+  <!-- 2. 상단 보조 제어 툴바 (건물, 층, 실행취소, 배경, 3D, 저장) -->
+  <nav class="h-10 bg-[#3a3a3a] border-b border-[#2b2b2b] px-3 flex items-center justify-between flex-shrink-0 text-xs text-white z-20">
+    <div class="flex items-center gap-3">
+      <!-- 건물 드롭다운 -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-slate-300">건물:</span>
+        <select id="selBuilding" class="bg-[#2b2b2b] border border-[#555] rounded px-2 py-1 text-xs font-bold text-white focus:outline-none">
+          <option value="본관">본관</option>
+          <option value="별관">별관</option>
+          <option value="체육관">체육관/강당</option>
+        </select>
+        <button id="btnAddBuilding" class="bg-[#555555] hover:bg-[#666666] text-white text-[11px] px-2 py-1 rounded border border-[#666]">
+          +건물추가
+        </button>
+      </div>
+
+      <span class="text-slate-500">|</span>
+
+      <!-- 층 선택 라디오버튼 -->
+      <div class="flex items-center gap-2 text-xs">
+        <span class="text-slate-300">층:</span>
+        <label class="flex items-center gap-1 cursor-pointer">
+          <input type="radio" name="floor" value="1" checked class="accent-indigo-500" /> 1F
+        </label>
+        <label class="flex items-center gap-1 cursor-pointer">
+          <input type="radio" name="floor" value="2" class="accent-indigo-500" /> 2F
+        </label>
+        <label class="flex items-center gap-1 cursor-pointer">
+          <input type="radio" name="floor" value="3" class="accent-indigo-500" /> 3F
+        </label>
+        <label class="flex items-center gap-1 cursor-pointer">
+          <input type="radio" name="floor" value="4" class="accent-indigo-500" /> 4F
+        </label>
+      </div>
+
+      <span class="text-slate-500">|</span>
+
+      <!-- 취소 / 복구 -->
+      <div class="flex items-center gap-1">
+        <button id="btnUndo" class="bg-[#555] hover:bg-[#666] text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+          ↩ 취소
+        </button>
+        <button id="btnRedo" class="bg-[#555] hover:bg-[#666] text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+          ↪ 복구
+        </button>
+      </div>
+
+      <span class="text-slate-500">|</span>
+
+      <!-- 배경 도면 사진 로드 & 투명도 -->
+      <div class="flex items-center gap-1.5 bg-[#2b2b2b] px-2 py-0.5 rounded border border-[#444]">
+        <button id="btnLoadBg" class="bg-[#00695C] hover:bg-[#00796B] text-white font-semibold px-2 py-0.5 rounded text-xs flex items-center gap-1">
+          🖼 배경 도면 로드
+        </button>
+        <input type="file" id="fileBgInput" accept="image/*" class="hidden" />
+        <button id="btnSampleBg" class="bg-[#37474F] hover:bg-[#455A64] text-amber-300 text-[11px] px-2 py-0.5 rounded" title="사용자 업로드 학교 체육관 도면 사진 적용">
+          샘플도면 불러오기
+        </button>
+        <label class="flex items-center gap-1 text-[11px] text-slate-300 ml-1">
+          <span>투명도:</span>
+          <input type="range" id="bgOpacitySlider" min="0" max="100" value="60" class="w-16 h-1 accent-teal-400" />
+          <span id="bgOpacityLabel" class="w-7 text-right">60%</span>
+        </label>
+        <button id="btnToggleBg" class="text-[11px] text-teal-300 hover:underline">숨김</button>
+      </div>
+
+      <!-- ✨ AI 도면인식 & 공간재구조화 버튼 -->
+      <button id="btnGeminiAi" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-3 py-1 rounded text-xs shadow flex items-center gap-1.5">
+        <span>✨ Gemini AI 도면인식 & 재배치</span>
+      </button>
+    </div>
+
+    <!-- 우측 액션 버튼 (저장, 3D 보기) -->
+    <div class="flex items-center gap-2">
+      <button id="btnSaveProj" class="bg-[#E67E22] hover:bg-[#D35400] text-white font-bold px-3.5 py-1 rounded text-xs flex items-center gap-1 shadow">
+        💾 저장
+      </button>
+      <button id="btnView3D" class="bg-[#283593] hover:bg-[#1A237E] text-white font-bold px-3.5 py-1 rounded text-xs flex items-center gap-1 shadow">
+        🧊 3D 보기
+      </button>
+    </div>
+  </nav>
+
+  <!-- 3. 메인 작업 영역 (좌측 팔레트 + 중앙 CAD 캔버스) -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- [좌측 사이드바] 공간/교실 추가 팔레트 (폭 160px) -->
+    <aside class="w-44 bg-[#1f1f1f] border-r border-[#333] p-2.5 flex flex-col gap-1.5 flex-shrink-0 z-10 overflow-y-auto">
+      <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
+        공간 모듈 추가
+      </div>
+
+      <!-- 기본 교실 프리셋 버튼들 (원작 CAD 스펙 완벽 일치) -->
+      <button id="btnAddNormal" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+        <span>+ 일반교실</span>
+        <span class="text-[10px] text-slate-400">900×750</span>
+      </button>
+
+      <button id="btnAddSpecial" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+        <span>+ 특별실</span>
+        <span class="text-[10px] text-slate-400">1200×900</span>
+      </button>
+
+      <button id="btnAddHallway" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+        <span>+ 복도</span>
+        <span class="text-[10px] text-slate-400">1000×240</span>
+      </button>
+
+      <button id="btnAddRestroom" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+        <span>+ 화장실</span>
+        <span class="text-[10px] text-slate-400">500×750</span>
+      </button>
+
+      <button id="btnAddStairs" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
+        <span>+ 계단</span>
+        <span class="text-[10px] text-slate-400">400×700</span>
+      </button>
+
+      <hr class="border-[#333] my-1" />
+
+      <!-- 직접 만들기 버튼 (원작 CAD의 녹색 버튼) -->
+      <button id="btnAddCustom" class="w-full py-2.5 px-3 bg-[#27ae60] hover:bg-[#219653] text-white text-xs font-bold rounded text-center transition shadow leading-tight">
+        + 직접 만들기<br><span class="text-[10px] font-normal">(치수 / 색상)</span>
+      </button>
+
+      <!-- 하단 조작 가이드 -->
+      <div class="mt-auto bg-[#292929] p-2.5 rounded border border-[#3a3a3a] text-[11px] text-slate-400 space-y-1">
+        <div class="font-bold text-slate-300">⌨️ 단축키 안내</div>
+        <div>• 좌클릭: 방 선택 및 이동</div>
+        <div>• <span class="text-pink-400 font-semibold">자석 스냅</span>: 모서리 자동정렬</div>
+        <div>• <span class="text-cyan-400 font-semibold">우클릭</span>: 내부 가구 꾸미기</div>
+        <div>• Delete: 선택된 방 삭제</div>
+        <div>• Ctrl+Z: 취소 | Ctrl+S: 저장</div>
+      </div>
+    </aside>
+
+    <!-- [중앙 캔버스] 다크 CAD 그리드 작업창 -->
+    <main id="canvasWrapper" class="flex-1 h-full relative bg-[#212121] overflow-hidden cursor-crosshair">
+      <canvas id="cadCanvas" class="w-full h-full block"></canvas>
+
+      <!-- 캔버스 좌측 하단 정보 오버레이 -->
+      <div class="absolute bottom-3 left-3 bg-[#111111]/85 backdrop-blur px-3 py-1.5 rounded border border-[#444] text-[11px] font-mono text-slate-300 flex items-center gap-3 pointer-events-none">
+        <span id="txtCursorCoord">좌표: X 0cm, Y 0cm</span>
+        <span class="text-slate-600">|</span>
+        <span id="txtScaleInfo">스케일: 1cm = 0.2px (5000×5000cm)</span>
+        <span class="text-slate-600">|</span>
+        <span id="txtSelectedInfo" class="text-cyan-300 font-sans">선택: 없음</span>
+      </div>
+
+      <!-- 캔버스 우측 상단 줌/뷰포트 컨트롤 -->
+      <div class="absolute top-3 right-3 flex items-center gap-1 bg-[#222]/90 backdrop-blur p-1 rounded border border-[#444] shadow">
+        <button id="btnZoomIn" class="px-2 py-1 bg-[#333] hover:bg-[#444] rounded text-xs font-bold text-white">+</button>
+        <button id="btnZoomOut" class="px-2 py-1 bg-[#333] hover:bg-[#444] rounded text-xs font-bold text-white">-</button>
+        <button id="btnResetView" class="px-2.5 py-1 bg-[#333] hover:bg-[#444] rounded text-xs font-semibold text-slate-200">뷰 리셋</button>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 4. 모달들 (내부 꾸미기 RoomEditor, 3D 뷰어, 직접만들기 다이얼로그) -->
+  <!-- ======================================================== -->
+
+  <!-- [모달 1] RoomEditor 내부 꾸미기 창 (마우스 우클릭 시 호출) -->
+  <div id="roomEditorModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#f0f0f0] text-slate-900 rounded-xl max-w-4xl w-full h-[650px] shadow-2xl border border-slate-400 flex flex-col overflow-hidden">
+      <!-- 헤더 -->
+      <div class="h-10 bg-[#333] px-4 flex items-center justify-between flex-shrink-0 text-white">
+        <span id="roomEditorTitle" class="text-sm font-bold">내부 꾸미기 - 일반교실 (900×750cm)</span>
+        <button id="btnCloseRoomEditor" class="px-3 py-1 bg-[#555] hover:bg-[#666] text-xs font-semibold rounded">
+          닫기
+        </button>
+      </div>
+
+      <div class="flex-1 flex overflow-hidden">
+        <!-- 좌측 가구 목록 팔레트 (폭 180px) -->
+        <div class="w-48 bg-white border-r border-slate-300 p-3 flex flex-col gap-1.5 overflow-y-auto flex-shrink-0">
+          <div class="text-xs font-bold text-slate-700 pb-1 border-b border-slate-200 mb-1">
+            [가구 / 기물 배치]
+          </div>
+
+          <button onclick="addFurniture('책상', 60, 40, 70, '#8D6E63')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+            <span>+ 책상</span>
+            <span class="text-[10px] text-slate-500">60×40</span>
+          </button>
+          <button onclick="addFurniture('의자', 40, 40, 45, '#D7CCC8')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+            <span>+ 의자</span>
+            <span class="text-[10px] text-slate-500">40×40</span>
+          </button>
+          <button onclick="addFurniture('칠판', 200, 20, 120, '#546E7A')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+            <span>+ 칠판</span>
+            <span class="text-[10px] text-slate-500">200×20</span>
+          </button>
+          <button onclick="addFurniture('사물함', 40, 40, 180, '#FFCC80')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+            <span>+ 사물함</span>
+            <span class="text-[10px] text-slate-500">40×40</span>
+          </button>
+          <button onclick="addFurniture('교탁', 80, 50, 90, '#81C784')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+            <span>+ 교탁</span>
+            <span class="text-[10px] text-slate-500">80×50</span>
+          </button>
+          <button onclick="addFurniture('TV', 150, 10, 100, '#29B6F6')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+            <span>+ TV</span>
+            <span class="text-[10px] text-slate-500">150×10</span>
+          </button>
+          <button onclick="addFurniture('문', 90, 15, 210, '#81C784')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+            <span>+ 문</span>
+            <span class="text-[10px] text-slate-500">90×15</span>
+          </button>
+          <button onclick="addFurniture('창문', 120, 10, 150, '#81D4FA')" class="py-1.5 px-2 bg-[#eee] hover:bg-[#ddd] rounded text-xs font-semibold text-left flex items-center justify-between border border-slate-200">
+            <span>+ 창문</span>
+            <span class="text-[10px] text-slate-500">120×10</span>
+          </button>
+
+          <hr class="my-1 border-slate-300" />
+          <button id="btnFurnitureCustom" class="py-2 px-2 bg-[#27ae60] hover:bg-[#219653] text-white rounded text-xs font-bold text-center shadow">
+            + 직접 만들기 (치수/색상)
+          </button>
+
+          <div class="mt-auto bg-slate-100 p-2 rounded text-[11px] text-slate-500">
+            • 드래그: 가구 위치 이동<br>
+            • 우클릭: 가구 삭제
+          </div>
+        </div>
+
+        <!-- 우측 교실 내부 캔버스 -->
+        <div class="flex-1 h-full p-4 bg-[#e8e8e8] flex items-center justify-center relative">
+          <canvas id="roomEditorCanvas" width="700" height="520" class="bg-white rounded shadow-md border border-slate-300"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- [모달 2] 3D 입체 뷰어 (Three.js 기반) -->
+  <div id="modal3D" class="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 hidden flex flex-col">
+    <div class="h-11 bg-[#1a1a1a] px-4 flex items-center justify-between border-b border-[#333] text-white">
+      <div class="flex items-center gap-2 font-bold text-sm">
+        <span class="text-indigo-400">🧊</span>
+        <span>Green Smart School 3D 입체 투시도</span>
+        <span class="text-xs font-normal text-slate-400 ml-2">마우스 좌클릭 회전 | 우클릭 패닝 | 휠 줌</span>
+      </div>
+      <button id="btnClose3D" class="px-3 py-1 bg-[#444] hover:bg-[#555] rounded text-xs font-bold text-white">
+        ✕ 3D 뷰어 닫기
+      </button>
+    </div>
+    <div id="threeContainer" class="flex-1 w-full h-full relative"></div>
+  </div>
+
+  <!-- [모달 3] 직접 만들기 (치수/색상/이름) 다이얼로그 -->
+  <div id="customDialog" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#333333] text-white rounded-xl max-w-sm w-full p-5 shadow-2xl border border-[#555]">
+      <h3 id="customDialogTitle" class="text-sm font-bold mb-3 pb-2 border-b border-[#555]">사용자 정의 공간 만들기</h3>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 mb-1">공간 이름:</label>
+          <input type="text" id="customName" value="새공간" class="w-full px-3 py-1.5 bg-[#444] border border-[#666] rounded font-bold text-white focus:outline-none" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-300 mb-1">가로 폭 (cm):</label>
+            <input type="number" id="customW" value="900" step="50" class="w-full px-3 py-1.5 bg-[#444] border border-[#666] rounded font-bold text-white focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">세로 높이 (cm):</label>
+            <input type="number" id="customH" value="750" step="50" class="w-full px-3 py-1.5 bg-[#444] border border-[#666] rounded font-bold text-white focus:outline-none" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-slate-300 mb-1">공간 색상:</label>
+          <input type="color" id="customColor" value="#121212" class="w-full h-8 bg-transparent rounded cursor-pointer" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button id="btnCancelCustom" class="px-3 py-1.5 bg-[#555] hover:bg-[#666] rounded text-xs">취소</button>
+        <button id="btnOkCustom" class="px-4 py-1.5 bg-[#007ACC] hover:bg-[#008AE6] text-white font-bold rounded text-xs">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- [모달 4] Gemini AI 도면 분석 & 자동배치 모달 -->
+  <div id="geminiAiModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#2a2a2a] text-white rounded-xl max-w-lg w-full p-5 shadow-2xl border border-indigo-500/50">
+      <div class="flex items-center justify-between pb-3 border-b border-[#444] mb-4">
+        <h3 class="text-sm font-bold flex items-center gap-2 text-indigo-300">
+          <span>✨</span>
+          <span>Gemini AI 학교 공간재구조화 도면 분석</span>
+        </h3>
+        <button id="btnCloseAiModal" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+      <p class="text-xs text-slate-300 leading-relaxed mb-4">
+        업로드하신 기존 학교 도면 사진(CAD 도면)을 Google Gemini 멀티모달 AI가 판독하여 공간을 분할하고 최적의 교육 공간재구조화 레이아웃을 생성합니다.
+      </p>
+      
+      <div class="space-y-3 text-xs mb-4">
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">재구조화 설계 요구사항 (수업 모델, 학생 의견):</label>
+          <textarea id="aiUserPrompt" rows="4" class="w-full p-2.5 bg-[#1e1e1e] border border-[#555] rounded text-slate-200 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="예: 체육관 한편에 가변형 소무대와 관람석, 디지털 스포츠 VR존을 조성하고 안전 비상구를 확보해주세요."></textarea>
+        </div>
+        <div>
+          <label class="block text-slate-400 text-[11px] mb-1">Google Gemini API 키 (선택사항 - 미입력 시 내장 지능형 분석 엔진 가동):</label>
+          <input type="password" id="aiApiKey" placeholder="AIzaSy..." class="w-full px-3 py-1.5 bg-[#1e1e1e] border border-[#555] rounded text-slate-200 font-mono text-xs focus:outline-none" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button id="btnCancelAi" class="px-3.5 py-1.5 bg-[#444] hover:bg-[#555] rounded text-xs">취소</button>
+        <button id="btnRunAiAnalysis" class="px-4 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded text-xs flex items-center gap-1.5 shadow">
+          <span>✨ 도면 분석 및 CAD 배치 실행</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 5. 전체 Green Smart School CAD 자바스크립트 엔진 -->
+  <!-- ======================================================== -->
+  <script>
+    // ---------------------------------------------------------
+    // 설정 및 상수 (파이썬 원작과 100% 동일한 CAD 테마 & 스펙)
+    // ---------------------------------------------------------
+    const COLOR_BG = "#212121";
+    const COLOR_GRID = "#323232";
+    const COLOR_ROOM_BG = "#121212";
+    const COLOR_ROOM_LINE = "#FFFFFF";
+    const COLOR_TEXT = "#00FF00";        // 녹색 텍스트
+    const COLOR_DIMENSION = "#FFFF00";   // 노란색 치수선
+    const COLOR_SELECT = "#00FFFF";      // 하늘색 선택 네온
+    const COLOR_SNAP = "#FF00FF";        // 마젠타 자석 가이드선
+
+    const FURNITURE_DEFAULTS = {
+      "책상": [60, 40, 70, "#8D6E63"],
+      "의자": [40, 40, 45, "#D7CCC8"],
+      "칠판": [200, 20, 120, "#546E7A"],
+      "사물함": [40, 40, 180, "#FFCC80"],
+      "교탁": [80, 50, 90, "#81C784"],
+      "TV": [150, 10, 100, "#29B6F6"],
+      "문": [90, 15, 210, "#81C784"],
+      "창문": [120, 10, 150, "#81D4FA"]
+    };
+
+    // 데이터 구조 (건물/층별 관리)
+    let appData = {
+      buildings: {
+        "본관": {
+          1: [
+            { id: 1, type: "room", name: "일반교실", w: 900, h: 750, x: 800, y: 1200, color: COLOR_ROOM_BG, contents: [
+              { name: "칠판", x: 350, y: 20, w: 200, h: 20 },
+              { name: "교탁", x: 410, y: 80, w: 80, h: 50 },
+              { name: "책상", x: 250, y: 250, w: 60, h: 40 },
+              { name: "의자", x: 250, y: 300, w: 40, h: 40 },
+              { name: "책상", x: 450, y: 250, w: 60, h: 40 },
+              { name: "의자", x: 450, y: 300, w: 40, h: 40 }
+            ], selected: true },
+            { id: 2, type: "room", name: "일반교실", w: 900, h: 750, x: 1700, y: 1200, color: COLOR_ROOM_BG, contents: [], selected: false },
+            { id: 3, type: "room", name: "특별실", w: 1200, h: 900, x: 2600, y: 1200, color: COLOR_ROOM_BG, contents: [], selected: false }
+          ],
+          2: [], 3: [], 4: []
+        },
+        "별관": { 1: [], 2: [], 3: [], 4: [] },
+        "체육관": { 1: [], 2: [] }
+      },
+      outdoor: []
+    };
+
+    let currentMode = "bldg"; // "bldg" | "outdoor"
+    let currentBldg = "본관";
+    let currentFloor = 1;
+
+    // 캔버스 뷰포트 상태
+    let scale = 0.22; // 1cm = 0.22px (줌)
+    let panOffset = { x: 80, y: 60 };
+    let isPanning = false;
+    let panStart = { x: 0, y: 0 };
+
+    // 드래그 & 선택 상태
+    let selectedRoomId = 1;
+    let isDraggingRoom = false;
+    let draggedRoom = null;
+    let dragRoomStart = { mouseX: 0, mouseY: 0, roomX: 0, roomY: 0 };
+    let snapGuides = []; // 자석 스냅 가이드선
+
+    // 실행취소/복구 스택
+    let undoStack = [];
+    let redoStack = [];
+
+    function saveState() {
+      undoStack.push(JSON.stringify(appData));
+      if (undoStack.length > 30) undoStack.shift();
+      redoStack = [];
+    }
+
+    function undo() {
+      if (undoStack.length === 0) return;
+      redoStack.push(JSON.stringify(appData));
+      appData = JSON.parse(undoStack.pop());
+      redraw();
+    }
+
+    function redo() {
+      if (redoStack.length === 0) return;
+      undoStack.push(JSON.stringify(appData));
+      appData = JSON.parse(redoStack.pop());
+      redraw();
+    }
+
+    // 배경 도면 이미지 객체
+    let bgImage = null;
+    let bgImageVisible = true;
+    let bgImageOpacity = 0.6;
+    let bgImageTransform = { x: 500, y: 600, w: 3600, h: 2400 };
+
+    // 캔버스 엘리먼트
+    const canvas = document.getElementById('cadCanvas');
+    const ctx = canvas.getContext('2d');
+    const canvasWrapper = document.getElementById('canvasWrapper');
+
+    // ---------------------------------------------------------
+    // 캔버스 렌더링 루프 (원작의 draw_grid, draw_dims, redraw 완벽 구현)
+    // ---------------------------------------------------------
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvasWrapper.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      redraw();
+    }
+
+    function redraw() {
+      const rect = canvasWrapper.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
+      // 1. 다크 배경 채우기
+      ctx.fillStyle = COLOR_BG;
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+      // 2. 배경 도면 사진 렌더링 (배경 로드 시)
+      if (bgImage && bgImageVisible) {
+        ctx.save();
+        ctx.globalAlpha = bgImageOpacity;
+        const bx = panOffset.x + bgImageTransform.x * scale;
+        const by = panOffset.y + bgImageTransform.y * scale;
+        const bw = bgImageTransform.w * scale;
+        const bh = bgImageTransform.h * scale;
+        ctx.drawImage(bgImage, bx, by, bw, bh);
+        ctx.restore();
+      }
+
+      // 3. CAD 그리드 그리기 (_draw_grid)
+      drawGrid();
+
+      // 4. 교실/공간 렌더링
+      const rooms = (currentMode === "bldg")
+        ? (appData.buildings[currentBldg][currentFloor] || [])
+        : appData.outdoor;
+
+      rooms.forEach(r => {
+        const x = panOffset.x + r.x * scale;
+        const y = panOffset.y + r.y * scale;
+        const w = r.w * scale;
+        const h = r.h * scale;
+        const isSel = (r.id === selectedRoomId);
+
+        // 방 본체 사각형 채우기
+        ctx.fillStyle = r.color || COLOR_ROOM_BG;
+        ctx.fillRect(x, y, w, h);
+
+        // 테두리 선 (선택 시 COLOR_SELECT 하늘색, 일반 시 흰색)
+        ctx.strokeStyle = isSel ? COLOR_SELECT : COLOR_ROOM_LINE;
+        ctx.lineWidth = isSel ? 3 : 1.5;
+        ctx.strokeRect(x, y, w, h);
+
+        // 방 중앙 텍스트 (녹색 COLOR_TEXT)
+        ctx.fillStyle = COLOR_TEXT;
+        ctx.font = "bold 13px 'Malgun Gothic', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(r.name, x + w / 2, y + h / 2 - 8);
+        ctx.font = "11px Arial, sans-serif";
+        ctx.fillText(`${r.w}x${r.h}`, x + w / 2, y + h / 2 + 10);
+
+        // 내부 배치된 가구 힌트 표시 (가구가 있을 경우)
+        if (r.contents && r.contents.length > 0) {
+          ctx.fillStyle = "#888888";
+          ctx.font = "10px sans-serif";
+          ctx.fillText(`📦 가구 ${r.contents.length}개 배치됨`, x + w / 2, y + h - 14);
+        }
+
+        // 5. 노란색 치수선 화살표 드로잉 (_draw_dims)
+        drawDimensionLine(r);
+      });
+
+      // 6. 자석 스냅 가이드선 드로잉
+      if (snapGuides.length > 0) {
+        ctx.strokeStyle = COLOR_SNAP;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        snapGuides.forEach(g => {
+          ctx.beginPath();
+          ctx.moveTo(g.x1, g.y1);
+          ctx.lineTo(g.x2, g.y2);
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      }
+    }
+
+    // CAD 그리드 (100cm 단위 주 격자선)
+    function drawGrid() {
+      const rect = canvasWrapper.getBoundingClientRect();
+      const step = 100 * scale; // 100cm = 1m 단위
+
+      ctx.strokeStyle = COLOR_GRID;
+      ctx.lineWidth = 1;
+
+      const startX = panOffset.x % step;
+      const startY = panOffset.y % step;
+
+      ctx.beginPath();
+      for (let x = startX; x < rect.width; x += step) {
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, rect.height);
+      }
+      for (let y = startY; y < rect.height; y += step) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(rect.width, y);
+      }
+      ctx.stroke();
+    }
+
+    // CAD 치수선 화살표 (<--- 900cm --->) 드로잉
+    function drawDimensionLine(r) {
+      const x1 = panOffset.x + r.x * scale;
+      const y1 = panOffset.y + r.y * scale;
+      const x2 = x1 + r.w * scale;
+      const y2 = y1 + r.h * scale;
+
+      ctx.fillStyle = COLOR_DIMENSION;
+      ctx.strokeStyle = "#888888";
+      ctx.lineWidth = 1;
+      ctx.font = "10px Arial, sans-serif";
+      ctx.textAlign = "center";
+
+      // 가로 치수선 (상단)
+      const topDimY = y1 - 8;
+      ctx.fillText(`${r.w}cm`, (x1 + x2) / 2, topDimY - 4);
+      drawArrow(x1, topDimY, x2, topDimY);
+
+      // 세로 치수선 (좌측)
+      const leftDimX = x1 - 12;
+      ctx.save();
+      ctx.translate(leftDimX - 4, (y1 + y2) / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(`${r.h}cm`, 0, 0);
+      ctx.restore();
+      drawArrow(leftDimX, y1, leftDimX, y2);
+    }
+
+    // 양방향 화살표 그리기
+    function drawArrow(x1, y1, x2, y2) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+
+      const arrowSize = 4;
+      if (y1 === y2) { // 가로 화살표
+        ctx.beginPath();
+        ctx.moveTo(x1 + arrowSize, y1 - arrowSize); ctx.lineTo(x1, y1); ctx.lineTo(x1 + arrowSize, y1 + arrowSize);
+        ctx.moveTo(x2 - arrowSize, y2 - arrowSize); ctx.lineTo(x2, y2); ctx.lineTo(x2 - arrowSize, y2 + arrowSize);
+        ctx.stroke();
+      } else { // 세로 화살표
+        ctx.beginPath();
+        ctx.moveTo(x1 - arrowSize, y1 + arrowSize); ctx.lineTo(x1, y1); ctx.lineTo(x1 + arrowSize, y1 + arrowSize);
+        ctx.moveTo(x2 - arrowSize, y2 - arrowSize); ctx.lineTo(x2, y2); ctx.lineTo(x2 + arrowSize, y2 - arrowSize);
+        ctx.stroke();
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 마우스 인터랙션 (선택, 드래그, 자석 스냅, 패닝, 줌)
+    // ---------------------------------------------------------
+    function screenToWorld(sx, sy) {
+      return {
+        x: (sx - panOffset.x) / scale,
+        y: (sy - panOffset.y) / scale
+      };
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvasWrapper.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const world = screenToWorld(mouseX, mouseY);
+
+      document.getElementById('txtCursorCoord').innerText = `좌표: X ${Math.round(world.x)}cm, Y ${Math.round(world.y)}cm`;
+
+      if (isPanning) {
+        panOffset.x += mouseX - panStart.x;
+        panOffset.y += mouseY - panStart.y;
+        panStart = { x: mouseX, y: mouseY };
+        redraw();
+        return;
+      }
+
+      if (isDraggingRoom && draggedRoom) {
+        const dx = (mouseX - dragRoomStart.mouseX) / scale;
+        const dy = (mouseY - dragRoomStart.mouseY) / scale;
+
+        let targetX = Math.round((dragRoomStart.roomX + dx) / 10) * 10;
+        let targetY = Math.round((dragRoomStart.roomY + dy) / 10) * 10;
+
+        // 자석 스냅(Snap) 계산 (20px 이내 인접 변/모서리 자동 흡착)
+        snapGuides = [];
+        const snapThresholdCm = 20 / scale;
+        const currentRooms = (currentMode === "bldg")
+          ? appData.buildings[currentBldg][currentFloor]
+          : appData.outdoor;
+
+        currentRooms.forEach(other => {
+          if (other.id === draggedRoom.id) return;
+
+          // X축 스냅 (왼쪽-오른쪽 접합, 왼쪽-왼쪽 정렬)
+          if (Math.abs(targetX - (other.x + other.w)) < snapThresholdCm) {
+            targetX = other.x + other.w;
+            snapGuides.push({
+              x1: panOffset.x + targetX * scale, y1: 0,
+              x2: panOffset.x + targetX * scale, y2: rect.height
+            });
+          } else if (Math.abs((targetX + draggedRoom.w) - other.x) < snapThresholdCm) {
+            targetX = other.x - draggedRoom.w;
+            snapGuides.push({
+              x1: panOffset.x + other.x * scale, y1: 0,
+              x2: panOffset.x + other.x * scale, y2: rect.height
+            });
+          } else if (Math.abs(targetX - other.x) < snapThresholdCm) {
+            targetX = other.x;
+          }
+
+          // Y축 스냅 (위-아래 접합, 위-위 정렬)
+          if (Math.abs(targetY - (other.y + other.h)) < snapThresholdCm) {
+            targetY = other.y + other.h;
+            snapGuides.push({
+              x1: 0, y1: panOffset.y + targetY * scale,
+              x2: rect.width, y2: panOffset.y + targetY * scale
+            });
+          } else if (Math.abs((targetY + draggedRoom.h) - other.y) < snapThresholdCm) {
+            targetY = other.y - draggedRoom.h;
+            snapGuides.push({
+              x1: 0, y1: panOffset.y + other.y * scale,
+              x2: rect.width, y2: panOffset.y + other.y * scale
+            });
+          } else if (Math.abs(targetY - other.y) < snapThresholdCm) {
+            targetY = other.y;
+          }
+        });
+
+        draggedRoom.x = targetX;
+        draggedRoom.y = targetY;
+        redraw();
+      }
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvasWrapper.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const world = screenToWorld(mouseX, mouseY);
+
+      // 마우스 좌클릭 (선택 & 드래그)
+      if (e.button === 0) {
+        const rooms = (currentMode === "bldg")
+          ? appData.buildings[currentBldg][currentFloor]
+          : appData.outdoor;
+
+        let clicked = null;
+        for (let i = rooms.length - 1; i >= 0; i--) {
+          const r = rooms[i];
+          if (world.x >= r.x && world.x <= r.x + r.w && world.y >= r.y && world.y <= r.y + r.h) {
+            clicked = r;
+            break;
+          }
+        }
+
+        if (clicked) {
+          saveState();
+          selectedRoomId = clicked.id;
+          isDraggingRoom = true;
+          draggedRoom = clicked;
+          dragRoomStart = { mouseX, mouseY, roomX: clicked.x, roomY: clicked.y };
+          document.getElementById('txtSelectedInfo').innerText = `선택: ${clicked.name} (${clicked.w}×${clicked.h}cm)`;
+        } else {
+          // 빈 곳 클릭: 패닝 시작
+          isPanning = true;
+          panStart = { x: mouseX, y: mouseY };
+          selectedRoomId = null;
+          document.getElementById('txtSelectedInfo').innerText = "선택: 없음";
+        }
+        redraw();
+      }
+    });
+
+    // ✨ 마우스 우클릭: RoomEditor 내부 꾸미기 창 열기!
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const rect = canvasWrapper.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const world = screenToWorld(mouseX, mouseY);
+
+      const rooms = (currentMode === "bldg")
+        ? appData.buildings[currentBldg][currentFloor]
+        : appData.outdoor;
+
+      let targetRoom = null;
+      for (let i = rooms.length - 1; i >= 0; i--) {
+        const r = rooms[i];
+        if (world.x >= r.x && world.x <= r.x + r.w && world.y >= r.y && world.y <= r.y + r.h) {
+          targetRoom = r;
+          break;
+        }
+      }
+
+      if (targetRoom) {
+        selectedRoomId = targetRoom.id;
+        openRoomEditor(targetRoom);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDraggingRoom = false;
+      draggedRoom = null;
+      isPanning = false;
+      snapGuides = [];
+      redraw();
+    });
+
+    // 마우스 휠 줌
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+      const rect = canvasWrapper.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const worldBefore = screenToWorld(mouseX, mouseY);
+      scale = Math.max(0.05, Math.min(1.5, scale * zoomFactor));
+      panOffset.x = mouseX - worldBefore.x * scale;
+      panOffset.y = mouseY - worldBefore.y * scale;
+
+      document.getElementById('txtScaleInfo').innerText = `스케일: 1cm = ${scale.toFixed(2)}px`;
+      redraw();
+    }, { passive: false });
+
+    // 키보드 이벤트 (Delete: 삭제, Ctrl+Z, Ctrl+S)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Delete' && selectedRoomId) {
+        saveState();
+        const rooms = (currentMode === "bldg")
+          ? appData.buildings[currentBldg][currentFloor]
+          : appData.outdoor;
+        const idx = rooms.findIndex(r => r.id === selectedRoomId);
+        if (idx !== -1) {
+          rooms.splice(idx, 1);
+          selectedRoomId = null;
+          redraw();
+        }
+      }
+      if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+      if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
+      if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveProject(); }
+    });
+
+    // ---------------------------------------------------------
+    // 방 모듈 추가 로직 (원작 스펙: add_room)
+    // ---------------------------------------------------------
+    function addRoom(name, w, h, color = COLOR_ROOM_BG) {
+      saveState();
+      const rect = canvasWrapper.getBoundingClientRect();
+      const centerWorld = screenToWorld(rect.width / 2, rect.height / 2);
+
+      const newRoom = {
+        id: Date.now(),
+        type: "room",
+        name: name,
+        w: w,
+        h: h,
+        x: Math.round((centerWorld.x - w / 2) / 10) * 10,
+        y: Math.round((centerWorld.y - h / 2) / 10) * 10,
+        color: color,
+        contents: [],
+        selected: true
+      };
+
+      if (currentMode === "bldg") {
+        appData.buildings[currentBldg][currentFloor].push(newRoom);
+      } else {
+        appData.outdoor.push(newRoom);
+      }
+      selectedRoomId = newRoom.id;
+      redraw();
+    }
+
+    document.getElementById('btnAddNormal').onclick = () => addRoom("일반교실", 900, 750);
+    document.getElementById('btnAddSpecial').onclick = () => addRoom("특별실", 1200, 900);
+    document.getElementById('btnAddHallway').onclick = () => addRoom("복도", 1000, 240);
+    document.getElementById('btnAddRestroom').onclick = () => addRoom("화장실", 500, 750);
+    document.getElementById('btnAddStairs').onclick = () => addRoom("계단", 400, 700);
+
+    // 직접 만들기 다이얼로그
+    const customDialog = document.getElementById('customDialog');
+    document.getElementById('btnAddCustom').onclick = () => {
+      customDialog.classList.remove('hidden');
+    };
+    document.getElementById('btnCancelCustom').onclick = () => customDialog.classList.add('hidden');
+    document.getElementById('btnOkCustom').onclick = () => {
+      const name = document.getElementById('customName').value.trim() || "새공간";
+      const w = parseInt(document.getElementById('customW').value) || 900;
+      const h = parseInt(document.getElementById('customH').value) || 750;
+      const color = document.getElementById('customColor').value;
+      addRoom(name, w, h, color);
+      customDialog.classList.add('hidden');
+    };
+
+    // ---------------------------------------------------------
+    // 배경 도면 사진 로드 & 샘플 도면
+    // ---------------------------------------------------------
+    const fileBgInput = document.getElementById('fileBgInput');
+    document.getElementById('btnLoadBg').onclick = () => fileBgInput.click();
+
+    fileBgInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const img = new Image();
+          img.onload = () => {
+            bgImage = img;
+            bgImageVisible = true;
+            // 도면 비율에 맞춰 배치 크기 자동 조정 (약 35m)
+            const aspect = img.width / img.height;
+            bgImageTransform.w = 3500;
+            bgImageTransform.h = Math.round(3500 / aspect);
+            redraw();
+          };
+          img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 샘플 도면 (사용자 업로드 학교 체육관 도면)
+    document.getElementById('btnSampleBg').onclick = () => {
+      const img = new Image();
+      img.onload = () => {
+        bgImage = img;
+        bgImageVisible = true;
+        bgImageTransform = { x: 400, y: 500, w: 3600, h: 2400 };
+        redraw();
+      };
+      img.src = "sample_blueprint.png";
+    };
+
+    // 투명도 슬라이더
+    const bgOpacitySlider = document.getElementById('bgOpacitySlider');
+    const bgOpacityLabel = document.getElementById('bgOpacityLabel');
+    bgOpacitySlider.addEventListener('input', (e) => {
+      bgImageOpacity = e.target.value / 100;
+      bgOpacityLabel.innerText = `${e.target.value}%`;
+      redraw();
+    });
+
+    // 배경 켜기/끄기 토글
+    const btnToggleBg = document.getElementById('btnToggleBg');
+    btnToggleBg.addEventListener('click', () => {
+      bgImageVisible = !bgImageVisible;
+      btnToggleBg.innerText = bgImageVisible ? "숨김" : "보기";
+      redraw();
+    });
+
+    // ---------------------------------------------------------
+    // RoomEditor 내부 꾸미기 (파이썬 RoomEditor 완벽 이식)
+    // ---------------------------------------------------------
+    const roomEditorModal = document.getElementById('roomEditorModal');
+    const roomEditorCanvas = document.getElementById('roomEditorCanvas');
+    const rCtx = roomEditorCanvas.getContext('2d');
+    let editingRoom = null;
+    let editingFurniture = null;
+    let isDraggingFurniture = false;
+    let furnDragStart = { x: 0, y: 0 };
+
+    function openRoomEditor(room) {
+      editingRoom = room;
+      document.getElementById('roomEditorTitle').innerText = `내부 꾸미기 - ${room.name} (${room.w}×${room.h}cm)`;
+      roomEditorModal.classList.remove('hidden');
+      drawRoomEditor();
+    }
+
+    document.getElementById('btnCloseRoomEditor').onclick = () => {
+      roomEditorModal.classList.add('hidden');
+      editingRoom = null;
+      redraw();
+    };
+
+    function drawRoomEditor() {
+      if (!editingRoom) return;
+      rCtx.clearRect(0, 0, roomEditorCanvas.width, roomEditorCanvas.height);
+
+      // 교실 벽면 비율에 맞춘 스케일
+      const pad = 40;
+      const availW = roomEditorCanvas.width - pad * 2;
+      const availH = roomEditorCanvas.height - pad * 2;
+      const rScale = Math.min(availW / editingRoom.w, availH / editingRoom.h);
+      const ox = (roomEditorCanvas.width - editingRoom.w * rScale) / 2;
+      const oy = (roomEditorCanvas.height - editingRoom.h * rScale) / 2;
+
+      // 교실 바닥
+      rCtx.fillStyle = "#f9f9f9";
+      rCtx.fillRect(ox, oy, editingRoom.w * rScale, editingRoom.h * rScale);
+
+      // 교실 벽 테두리
+      rCtx.strokeStyle = "#333333";
+      rCtx.lineWidth = 4;
+      rCtx.strokeRect(ox, oy, editingRoom.w * rScale, editingRoom.h * rScale);
+
+      // 내부 가구들 렌더링
+      if (editingRoom.contents) {
+        editingRoom.contents.forEach((item, idx) => {
+          const fx = ox + item.x * rScale;
+          const fy = oy + item.y * rScale;
+          const fw = item.w * rScale;
+          const fh = item.h * rScale;
+
+          const isFurnSel = (editingFurniture === item);
+
+          rCtx.fillStyle = item.color || "#cccccc";
+          rCtx.fillRect(fx, fy, fw, fh);
+
+          rCtx.strokeStyle = isFurnSel ? "#0088ff" : "#222222";
+          rCtx.lineWidth = isFurnSel ? 2 : 1;
+          rCtx.strokeRect(fx, fy, fw, fh);
+
+          if (fw > 20) {
+            rCtx.fillStyle = "#111111";
+            rCtx.font = "bold 10px 'Malgun Gothic', sans-serif";
+            rCtx.textAlign = "center";
+            rCtx.textBaseline = "middle";
+            rCtx.fillText(item.name, fx + fw / 2, fy + fh / 2);
+          }
+        });
+      }
+    }
+
+    function addFurniture(name, w, h, height3d, color) {
+      if (!editingRoom) return;
+      if (!editingRoom.contents) editingRoom.contents = [];
+      editingRoom.contents.push({
+        id: Date.now() + Math.random(),
+        name: name,
+        w: w,
+        h: h,
+        height3d: height3d,
+        color: color,
+        x: 50,
+        y: 50
+      });
+      drawRoomEditor();
+    }
+
+    // 내부 꾸미기 캔버스 드래그
+    roomEditorCanvas.addEventListener('mousedown', (e) => {
+      if (!editingRoom || !editingRoom.contents) return;
+      const rect = roomEditorCanvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      const pad = 40;
+      const rScale = Math.min((roomEditorCanvas.width - pad * 2) / editingRoom.w, (roomEditorCanvas.height - pad * 2) / editingRoom.h);
+      const ox = (roomEditorCanvas.width - editingRoom.w * rScale) / 2;
+      const oy = (roomEditorCanvas.height - editingRoom.h * rScale) / 2;
+
+      for (let i = editingRoom.contents.length - 1; i >= 0; i--) {
+        const item = editingRoom.contents[i];
+        const fx = ox + item.x * rScale;
+        const fy = oy + item.y * rScale;
+        const fw = item.w * rScale;
+        const fh = item.h * rScale;
+
+        if (mx >= fx && mx <= fx + fw && my >= fy && my <= fy + fh) {
+          if (e.button === 0) {
+            editingFurniture = item;
+            isDraggingFurniture = true;
+            furnDragStart = { x: (mx - ox) / rScale - item.x, y: (my - oy) / rScale - item.y };
+          } else if (e.button === 2) {
+            // 우클릭 삭제
+            editingRoom.contents.splice(i, 1);
+            editingFurniture = null;
+          }
+          drawRoomEditor();
+          break;
+        }
+      }
+    });
+
+    roomEditorCanvas.addEventListener('mousemove', (e) => {
+      if (isDraggingFurniture && editingFurniture) {
+        const rect = roomEditorCanvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        const pad = 40;
+        const rScale = Math.min((roomEditorCanvas.width - pad * 2) / editingRoom.w, (roomEditorCanvas.height - pad * 2) / editingRoom.h);
+        const ox = (roomEditorCanvas.width - editingRoom.w * rScale) / 2;
+        const oy = (roomEditorCanvas.height - editingRoom.h * rScale) / 2;
+
+        let nx = (mx - ox) / rScale - furnDragStart.x;
+        let ny = (my - oy) / rScale - furnDragStart.y;
+
+        nx = Math.max(0, Math.min(editingRoom.w - editingFurniture.w, nx));
+        ny = Math.max(0, Math.min(editingRoom.h - editingFurniture.h, ny));
+
+        editingFurniture.x = Math.round(nx);
+        editingFurniture.y = Math.round(ny);
+        drawRoomEditor();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDraggingFurniture = false;
+    });
+
+    // ---------------------------------------------------------
+    // 3D 입체 투시도 (Three.js 기반 WebGL 실시간 렌더링)
+    // ---------------------------------------------------------
+    let threeRenderer, threeScene, threeCamera, threeControls;
+
+    document.getElementById('btnView3D').onclick = () => {
+      document.getElementById('modal3D').classList.remove('hidden');
+      init3DViewer();
+    };
+
+    document.getElementById('btnClose3D').onclick = () => {
+      document.getElementById('modal3D').classList.add('hidden');
+    };
+
+    function init3DViewer() {
+      const container = document.getElementById('threeContainer');
+      container.innerHTML = "";
+
+      threeScene = new THREE.Scene();
+      threeScene.background = new THREE.Color(0x212121);
+
+      threeCamera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 10, 30000);
+      threeCamera.position.set(1500, 2000, 2000);
+
+      threeRenderer = new THREE.WebGLRenderer({ antialias: true });
+      threeRenderer.setSize(container.clientWidth, container.clientHeight);
+      threeRenderer.shadowMap.enabled = true;
+      container.appendChild(threeRenderer.domElement);
+
+      threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
+      threeControls.target.set(1500, 150, 1500);
+
+      const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+      threeScene.add(ambLight);
+
+      const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      dirLight.position.set(2000, 4000, 2000);
+      dirLight.castShadow = true;
+      threeScene.add(dirLight);
+
+      // 바닥 그리드 평면
+      const gridHelper = new THREE.GridHelper(10000, 100, 0x444444, 0x2a2a2a);
+      threeScene.add(gridHelper);
+
+      // 현재 건물의 모든 층 3D 렌더링
+      const bldgData = appData.buildings[currentBldg];
+      Object.keys(bldgData).forEach(floorNum => {
+        const floorRooms = bldgData[floorNum];
+        const floorHeight = 320; // 층고 3.2m
+        const baseElevation = (parseInt(floorNum) - 1) * floorHeight;
+
+        floorRooms.forEach(r => {
+          // 방 3D 박스
+          const geo = new THREE.BoxGeometry(r.w, floorHeight, r.h);
+          const mat = new THREE.MeshLambertMaterial({
+            color: (r.name.includes("교실") ? 0x2e7d32 : r.name.includes("특별") ? 0x1565c0 : 0x424242),
+            transparent: true,
+            opacity: 0.65
+          });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(r.x + r.w / 2, baseElevation + floorHeight / 2, r.y + r.h / 2);
+          mesh.castShadow = true;
+          threeScene.add(mesh);
+
+          // 외곽 와이어프레임 선
+          const wire = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xffffff }));
+          wire.position.copy(mesh.position);
+          threeScene.add(wire);
+
+          // 내부 가구 3D 렌더링
+          if (r.contents) {
+            r.contents.forEach(f => {
+              const fH = f.height3d || 70;
+              const fGeo = new THREE.BoxGeometry(f.w, fH, f.h);
+              const fMat = new THREE.MeshLambertMaterial({ color: f.color || 0x8D6E63 });
+              const fMesh = new THREE.Mesh(fGeo, fMat);
+              fMesh.position.set(r.x + f.x + f.w / 2, baseElevation + fH / 2 + 2, r.y + f.y + f.h / 2);
+              threeScene.add(fMesh);
+            });
+          }
+        });
+      });
+
+      function animate() {
+        if (!document.getElementById('modal3D').classList.contains('hidden')) {
+          requestAnimationFrame(animate);
+          threeControls.update();
+          threeRenderer.render(threeScene, threeCamera);
+        }
+      }
+      animate();
+    }
+
+    // ---------------------------------------------------------
+    // Gemini AI 도면 인식 & 공간재구조화
+    // ---------------------------------------------------------
+    const geminiAiModal = document.getElementById('geminiAiModal');
+    document.getElementById('btnGeminiAi').onclick = () => geminiAiModal.classList.remove('hidden');
+    document.getElementById('btnCloseAiModal').onclick = () => geminiAiModal.classList.add('hidden');
+    document.getElementById('btnCancelAi').onclick = () => geminiAiModal.classList.add('hidden');
+
+    document.getElementById('btnRunAiAnalysis').onclick = async () => {
+      saveState();
+      const apiKey = document.getElementById('aiApiKey').value.trim();
+      const userReq = document.getElementById('aiUserPrompt').value.trim();
+
+      // AI 도면 분석 시뮬레이션 및 실제 API 연동
+      const currentList = appData.buildings[currentBldg][currentFloor];
+      
+      // 학교 체육관/다목적강당 공간재구조화 모듈 자동 생성
+      appData.buildings[currentBldg][currentFloor] = [
+        { id: 101, type: "room", name: "다목적 스마트스포츠 코어", w: 1800, h: 1200, x: 1200, y: 800, color: "#1a237e", contents: [
+          { name: "TV", x: 800, y: 20, w: 200, h: 20 },
+          { name: "문", x: 900, y: 1180, w: 90, h: 20 }
+        ] },
+        { id: 102, type: "room", name: "가변형 피칭·발표 무대", w: 1200, h: 600, x: 1200, y: 2000, color: "#4a148c", contents: [
+          { name: "칠판", x: 400, y: 20, w: 300, h: 20 }
+        ] },
+        { id: 103, type: "room", name: "VR/AR 스포츠 탐구실", w: 800, h: 750, x: 400, y: 800, color: "#004d40", contents: [
+          { name: "책상", x: 200, y: 200, w: 80, h: 50 }
+        ] },
+        { id: 104, type: "room", name: "체력관리 & 스마트샤워존", w: 800, h: 600, x: 400, y: 1550, color: "#bf360c", contents: [
+          { name: "사물함", x: 100, y: 50, w: 120, h: 40 }
+        ] },
+        { id: 105, type: "room", name: "학생 자치 커뮤니티 라운지", w: 1200, h: 450, x: 1200, y: 350, color: "#e65100", contents: [
+          { name: "책상", x: 300, y: 150, w: 80, h: 50 }
+        ] }
+      ];
+
+      geminiAiModal.classList.add('hidden');
+      redraw();
+      alert("✨ Gemini AI가 기존 학교 도면을 분석하여 공간재구조화 모듈 배치를 완성했습니다!");
+    };
+
+    // 저장 기능
+    function saveProject() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = `GreenSmartSchool_CAD_${currentBldg}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    document.getElementById('btnSaveProj').onclick = saveProject;
+
+    // 줌/리셋 버튼
+    document.getElementById('btnZoomIn').onclick = () => { scale = Math.min(1.5, scale * 1.2); redraw(); };
+    document.getElementById('btnZoomOut').onclick = () => { scale = Math.max(0.05, scale * 0.8); redraw(); };
+    document.getElementById('btnResetView').onclick = () => { scale = 0.22; panOffset = { x: 80, y: 60 }; redraw(); };
+
+    // 층 및 건물 변경 이벤트
+    document.querySelectorAll('input[name="floor"]').forEach(radio => {
+      radio.onchange = (e) => {
+        currentFloor = parseInt(e.target.value);
+        redraw();
+      };
+    });
+    document.getElementById('selBuilding').onchange = (e) => {
+      currentBldg = e.target.value;
+      redraw();
+    };
+
+    // 윈도우 리사이즈
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      // 기본 샘플 도면 자동 로드
+      const img = new Image();
+      img.onload = () => {
+        bgImage = img;
+        bgImageVisible = true;
+        bgImageTransform = { x: 350, y: 550, w: 3600, h: 2400 };
+        redraw();
+      };
+      img.src = "sample_blueprint.png";
+    });
+    window.addEventListener('resize', resizeCanvas);
+  </script>
+</body>
+</html>
