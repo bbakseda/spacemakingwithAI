@@ -422,13 +422,28 @@
           </div>
 
           <hr class="my-1 border-slate-300" />
-          <button id="btnFurnitureCustom" class="py-2 px-2 bg-[#27ae60] hover:bg-[#219653] text-white rounded text-xs font-bold text-center shadow">
+          <button id="btnFurnitureCustom" class="py-2 px-2 bg-[#27ae60] hover:bg-[#219653] text-white rounded text-xs font-bold text-center shadow cursor-pointer">
             + 직접 만들기 (치수/색상)
           </button>
 
-          <div class="mt-auto bg-slate-100 p-2 rounded text-[11px] text-slate-500">
-            • 터치/드래그: 기물 위치 이동<br>
-            • 기물 선택 후 상단 [회전] 또는 [삭제]
+          <!-- 선택된 기물 전용 퀵 컨트롤 패널 -->
+          <div id="panelSelectedFurniture" class="hidden mt-1 p-2 bg-blue-50 border border-blue-200 rounded flex flex-col gap-1.5 shadow-xs">
+            <div class="text-[11px] font-bold text-blue-900 flex items-center justify-between border-b border-blue-200 pb-1">
+              <span id="txtFurnSelectedName">선택 기물</span>
+              <span class="text-[10px] text-blue-600 font-mono" id="txtFurnSelectedDim">90×15</span>
+            </div>
+            <button id="btnSideRotateFurn" class="w-full py-2 px-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition">
+              <span class="text-sm">🔄</span> 90° 회전하기
+            </button>
+            <button id="btnSideDeleteFurn" class="w-full py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-semibold flex items-center justify-center gap-1 shadow-xs cursor-pointer active:scale-95 transition">
+              🗑️ 선택 삭제
+            </button>
+          </div>
+
+          <div class="mt-auto bg-slate-100 p-2 rounded text-[11px] text-slate-600 leading-relaxed">
+            • <b>이동</b>: 드래그 / 터치 이동<br>
+            • <b>회전</b>: 기물 위 <span class="text-blue-600 font-bold">🔄 버튼</span>, 더블탭/클릭, 키보드 <kbd class="px-1 bg-slate-200 rounded font-mono font-bold">R</kbd><br>
+            • <b>삭제</b>: 우클릭 또는 [삭제] 버튼
           </div>
         </div>
 
@@ -1316,8 +1331,24 @@
       redraw();
     }, { passive: false });
 
-    // 키보드 이벤트 (Delete: 삭제, Ctrl+Z, Ctrl+S)
+    // 키보드 이벤트 (Delete: 삭제, R: 가구 회전, Ctrl+Z, Ctrl+S)
     window.addEventListener('keydown', (e) => {
+      // 내부 꾸미기(RoomEditor) 모달이 열려 있는 경우
+      if (roomEditorModal && !roomEditorModal.classList.contains('hidden')) {
+        if (e.key === 'r' || e.key === 'R') {
+          e.preventDefault();
+          rotateSelectedFurniture();
+          return;
+        }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          if (editingFurniture && editingRoom && editingRoom.contents) {
+            e.preventDefault();
+            deleteSelectedFurniture();
+            return;
+          }
+        }
+      }
+
       if (e.key === 'Delete' && selectedRoomId) {
         saveState();
         const rooms = (currentMode === "bldg")
@@ -1527,6 +1558,11 @@
     let editingFurniture = null;
     let isDraggingFurniture = false;
     let furnDragStart = { x: 0, y: 0 };
+    let rotateHandleHitbox = null;
+    let lastFurnClickTime = 0;
+    let lastFurnClickedItem = null;
+    let lastFurnTapTime = 0;
+    let lastFurnTappedItem = null;
 
     function openRoomEditor(room) {
       editingRoom = room;
@@ -1584,21 +1620,127 @@
       rCtx.fillStyle = isOut ? (editingRoom.color ? editingRoom.color + "22" : "#f1f8e9") : "#f9f9f9";
       rCtx.fillRect(ox, oy, editingRoom.w * rScale, editingRoom.h * rScale);
 
-      // 교실 벽 테두리
+      // 교실 벽 테두리 (어두운 회색 4px)
       rCtx.strokeStyle = "#333333";
       rCtx.lineWidth = 4;
       rCtx.strokeRect(ox, oy, editingRoom.w * rScale, editingRoom.h * rScale);
 
-      // 내부 가구들 렌더링
+      rotateHandleHitbox = null;
+
+      // 내부 가구/소품들 렌더링
       if (editingRoom.contents) {
-        editingRoom.contents.forEach((item, idx) => {
+        editingRoom.contents.forEach((item) => {
           const fx = ox + item.x * rScale;
           const fy = oy + item.y * rScale;
           const fw = item.w * rScale;
           const fh = item.h * rScale;
-
           const isFurnSel = (editingFurniture === item);
 
+          // 🚪 1. 문 (Door) 건축 CAD 표준 심볼
+          if (item.name.includes("문") && !item.name.includes("창문")) {
+            const isHoriz = fw >= fh;
+            // 문틀 바탕 사각형
+            rCtx.fillStyle = item.color || "#81C784";
+            rCtx.fillRect(fx, fy, fw, fh);
+            rCtx.strokeStyle = isFurnSel ? "#0088ff" : "#2e7d32";
+            rCtx.lineWidth = isFurnSel ? 2.5 : 1.5;
+            rCtx.strokeRect(fx, fy, fw, fh);
+
+            // 건축 도면 여닫이 문짝(Leaf) & 열림 궤적 호(Swing Arc)
+            rCtx.save();
+            rCtx.strokeStyle = isFurnSel ? "#0088ff" : "#388E3C";
+            rCtx.lineWidth = 1.3;
+
+            if (isHoriz) {
+              // 가로 방향 문 (상단 또는 하단 벽)
+              const R = fw;
+              const swingDown = fy < (oy + (editingRoom.h * rScale) / 2);
+              const hingeX = fx;
+              const hingeY = swingDown ? (fy + fh) : fy;
+
+              // 열림 궤적 점선 호 (1/4 사분원)
+              rCtx.setLineDash([3, 3]);
+              rCtx.beginPath();
+              if (swingDown) {
+                rCtx.arc(hingeX, hingeY, R, 0, Math.PI / 2, false);
+              } else {
+                rCtx.arc(hingeX, hingeY, R, -Math.PI / 2, 0, false);
+              }
+              rCtx.stroke();
+              rCtx.setLineDash([]);
+
+              // 90도 열린 문짝 선
+              rCtx.beginPath();
+              rCtx.moveTo(hingeX, hingeY);
+              rCtx.lineTo(hingeX, swingDown ? (hingeY + R) : (hingeY - R));
+              rCtx.stroke();
+
+            } else {
+              // 세로 방향 문 (좌측 또는 우측 벽)
+              const R = fh;
+              const swingRight = fx < (ox + (editingRoom.w * rScale) / 2);
+              const hingeX = swingRight ? (fx + fw) : fx;
+              const hingeY = fy;
+
+              // 열림 궤적 점선 호 (1/4 사분원)
+              rCtx.setLineDash([3, 3]);
+              rCtx.beginPath();
+              if (swingRight) {
+                rCtx.arc(hingeX, hingeY, R, 0, Math.PI / 2, false);
+              } else {
+                rCtx.arc(hingeX, hingeY, R, Math.PI / 2, Math.PI, false);
+              }
+              rCtx.stroke();
+              rCtx.setLineDash([]);
+
+              // 90도 열린 문짝 선
+              rCtx.beginPath();
+              rCtx.moveTo(hingeX, hingeY);
+              rCtx.lineTo(swingRight ? (hingeX + R) : (hingeX - R), hingeY);
+              rCtx.stroke();
+            }
+            rCtx.restore();
+
+            // 문 이름 라벨
+            rCtx.fillStyle = "#1b5e20";
+            rCtx.font = "bold 10px 'Malgun Gothic', sans-serif";
+            rCtx.textAlign = "center";
+            rCtx.textBaseline = "middle";
+            rCtx.fillText(item.name, fx + fw / 2, fy + fh / 2);
+            return;
+          }
+
+          // 🪟 2. 창문 (Window) 건축 CAD 표준 심볼
+          if (item.name.includes("창문")) {
+            const isHoriz = fw >= fh;
+            rCtx.fillStyle = "#E1F5FE";
+            rCtx.fillRect(fx, fy, fw, fh);
+            rCtx.strokeStyle = isFurnSel ? "#0088ff" : "#0288D1";
+            rCtx.lineWidth = isFurnSel ? 2.5 : 1.5;
+            rCtx.strokeRect(fx, fy, fw, fh);
+
+            // 유리 이중선
+            rCtx.strokeStyle = "#03A9F4";
+            rCtx.lineWidth = 1.2;
+            rCtx.beginPath();
+            if (isHoriz) {
+              rCtx.moveTo(fx, fy + fh / 2);
+              rCtx.lineTo(fx + fw, fy + fh / 2);
+            } else {
+              rCtx.moveTo(fx + fw / 2, fy);
+              rCtx.lineTo(fx + fw / 2, fy + fh);
+            }
+            rCtx.stroke();
+
+            rCtx.fillStyle = "#01579B";
+            rCtx.font = "bold 9px 'Malgun Gothic', sans-serif";
+            rCtx.textAlign = "center";
+            rCtx.textBaseline = "middle";
+            rCtx.fillText(item.name, fx + fw / 2, fy + fh / 2);
+            return;
+          }
+
+          // 3. 일반 가구/소품 렌더링
           rCtx.fillStyle = item.color || "#cccccc";
           rCtx.fillRect(fx, fy, fw, fh);
 
@@ -1606,7 +1748,7 @@
           rCtx.lineWidth = isFurnSel ? 2 : 1;
           rCtx.strokeRect(fx, fy, fw, fh);
 
-          if (fw > 20) {
+          if (fw > 18 || fh > 18) {
             rCtx.fillStyle = "#111111";
             rCtx.font = "bold 10px 'Malgun Gothic', sans-serif";
             rCtx.textAlign = "center";
@@ -1614,13 +1756,67 @@
             rCtx.fillText(item.name, fx + fw / 2, fy + fh / 2);
           }
         });
+
+        // 4. 선택된 가구 주변에 회전 핸들 & 선택 바운딩 박스 표시
+        if (editingFurniture) {
+          const item = editingFurniture;
+          const fx = ox + item.x * rScale;
+          const fy = oy + item.y * rScale;
+          const fw = item.w * rScale;
+          const fh = item.h * rScale;
+
+          // 코너 마커 4개 (파란 점)
+          const mSize = 5;
+          rCtx.fillStyle = "#0088ff";
+          rCtx.fillRect(fx - mSize / 2, fy - mSize / 2, mSize, mSize);
+          rCtx.fillRect(fx + fw - mSize / 2, fy - mSize / 2, mSize, mSize);
+          rCtx.fillRect(fx - mSize / 2, fy + fh - mSize / 2, mSize, mSize);
+          rCtx.fillRect(fx + fw - mSize / 2, fy + fh - mSize / 2, mSize, mSize);
+
+          // 상단 회전 핸들 (원형 🔄 버튼)
+          const rotBtnRadius = 14;
+          const rotBtnX = fx + fw / 2;
+          const rotBtnY = fy - 22;
+
+          // 연결 가이드 점선
+          rCtx.beginPath();
+          rCtx.strokeStyle = "#0088ff";
+          rCtx.lineWidth = 1.5;
+          rCtx.setLineDash([2, 2]);
+          rCtx.moveTo(fx + fw / 2, fy);
+          rCtx.lineTo(rotBtnX, rotBtnY + rotBtnRadius);
+          rCtx.stroke();
+          rCtx.setLineDash([]);
+
+          // 원형 회전 버튼 배경
+          rCtx.beginPath();
+          rCtx.arc(rotBtnX, rotBtnY, rotBtnRadius, 0, Math.PI * 2);
+          rCtx.fillStyle = "#2563EB";
+          rCtx.fill();
+          rCtx.strokeStyle = "#ffffff";
+          rCtx.lineWidth = 2;
+          rCtx.stroke();
+
+          // 🔄 회전 아이콘
+          rCtx.fillStyle = "#ffffff";
+          rCtx.font = "bold 12px sans-serif";
+          rCtx.textAlign = "center";
+          rCtx.textBaseline = "middle";
+          rCtx.fillText("🔄", rotBtnX, rotBtnY + 1);
+
+          rotateHandleHitbox = {
+            x: rotBtnX,
+            y: rotBtnY,
+            r: rotBtnRadius + 8 // 여유 있는 터치/클릭 반경
+          };
+        }
       }
     }
 
     function addFurniture(name, w, h, height3d, color) {
       if (!editingRoom) return;
       if (!editingRoom.contents) editingRoom.contents = [];
-      editingRoom.contents.push({
+      const newItem = {
         id: Date.now() + Math.random(),
         name: name,
         w: w,
@@ -1628,35 +1824,52 @@
         height3d: height3d,
         color: color,
         x: 50,
-        y: 50
-      });
+        y: 50,
+        rotation: 0
+      };
+      editingRoom.contents.push(newItem);
+      editingFurniture = newItem;
+      updateFurnitureToolbar(newItem);
       drawRoomEditor();
     }
 
-    // RoomEditor 상단 툴바 (회전 & 삭제) 동기화
-    function updateFurnitureToolbar(item) {
-      const btnRot = document.getElementById('btnRotateFurniture');
-      const btnDel = document.getElementById('btnDeleteFurniture');
-      if (item) {
-        btnRot.classList.remove('hidden');
-        btnDel.classList.remove('hidden');
-        btnDel.innerText = `🗑️ '${item.name}' 삭제`;
-      } else {
-        btnRot.classList.add('hidden');
-        btnDel.classList.add('hidden');
+    // 오브젝트 90도 제자리 회전 함수
+    function rotateSelectedFurniture() {
+      if (!editingFurniture || !editingRoom) return;
+      const f = editingFurniture;
+
+      // 중심점 계산
+      const cx = f.x + f.w / 2;
+      const cy = f.y + f.h / 2;
+
+      // 너비와 높이 교체 (90도 회전)
+      const oldW = f.w;
+      const oldH = f.h;
+      f.w = oldH;
+      f.h = oldW;
+
+      // 중심점 기준으로 새 좌표 재계산 (제자리 회전)
+      let newX = Math.round(cx - f.w / 2);
+      let newY = Math.round(cy - f.h / 2);
+
+      // 교실 벽 경계 안으로 안전하게 클램핑
+      newX = Math.max(0, Math.min(editingRoom.w - f.w, newX));
+      newY = Math.max(0, Math.min(editingRoom.h - f.h, newY));
+
+      f.x = newX;
+      f.y = newY;
+      f.rotation = ((f.rotation || 0) + 90) % 360;
+
+      if (navigator.vibrate) {
+        try { navigator.vibrate(35); } catch (e) {}
       }
+
+      updateFurnitureToolbar(f);
+      drawRoomEditor();
     }
 
-    document.getElementById('btnRotateFurniture').onclick = () => {
-      if (editingFurniture) {
-        const tmp = editingFurniture.w;
-        editingFurniture.w = editingFurniture.h;
-        editingFurniture.h = tmp;
-        drawRoomEditor();
-      }
-    };
-
-    document.getElementById('btnDeleteFurniture').onclick = () => {
+    // 선택된 가구 삭제 함수
+    function deleteSelectedFurniture() {
       if (editingFurniture && editingRoom && editingRoom.contents) {
         const idx = editingRoom.contents.findIndex(f => f === editingFurniture);
         if (idx !== -1) {
@@ -1666,14 +1879,54 @@
           drawRoomEditor();
         }
       }
-    };
+    }
 
-    // 내부 꾸미기 캔버스 드래그 (마우스)
+    // RoomEditor 상단 툴바 및 사이드바 동기화
+    function updateFurnitureToolbar(item) {
+      const btnRot = document.getElementById('btnRotateFurniture');
+      const btnDel = document.getElementById('btnDeleteFurniture');
+      const sidePanel = document.getElementById('panelSelectedFurniture');
+      const sideName = document.getElementById('txtFurnSelectedName');
+      const sideDim = document.getElementById('txtFurnSelectedDim');
+
+      if (item) {
+        if (btnRot) btnRot.classList.remove('hidden');
+        if (btnDel) {
+          btnDel.classList.remove('hidden');
+          btnDel.innerText = `🗑️ '${item.name}' 삭제`;
+        }
+        if (sidePanel) {
+          sidePanel.classList.remove('hidden');
+          if (sideName) sideName.innerText = `선택: ${item.name}`;
+          if (sideDim) sideDim.innerText = `${item.w}×${item.h}cm`;
+        }
+      } else {
+        if (btnRot) btnRot.classList.add('hidden');
+        if (btnDel) btnDel.classList.add('hidden');
+        if (sidePanel) sidePanel.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('btnRotateFurniture').onclick = rotateSelectedFurniture;
+    document.getElementById('btnSideRotateFurn').onclick = rotateSelectedFurniture;
+    document.getElementById('btnDeleteFurniture').onclick = deleteSelectedFurniture;
+    document.getElementById('btnSideDeleteFurn').onclick = deleteSelectedFurniture;
+
+    // 내부 꾸미기 캔버스 인터랙션 (마우스)
     roomEditorCanvas.addEventListener('mousedown', (e) => {
       if (!editingRoom || !editingRoom.contents) return;
       const rect = roomEditorCanvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
+
+      // 1. 상단 회전 핸들 버튼(🔄) 클릭 감지
+      if (rotateHandleHitbox && editingFurniture) {
+        const dist = Math.hypot(mx - rotateHandleHitbox.x, my - rotateHandleHitbox.y);
+        if (dist <= rotateHandleHitbox.r) {
+          rotateSelectedFurniture();
+          return;
+        }
+      }
 
       const pad = 40;
       const rScale = Math.min((roomEditorCanvas.width - pad * 2) / editingRoom.w, (roomEditorCanvas.height - pad * 2) / editingRoom.h);
@@ -1691,6 +1944,18 @@
         if (mx >= fx && mx <= fx + fw && my >= fy && my <= fy + fh) {
           hitItem = item;
           if (e.button === 0) {
+            const now = Date.now();
+            // 더블클릭 감지: 동일 객체를 350ms 안에 다시 클릭하면 즉시 회전!
+            if (lastFurnClickedItem === item && (now - lastFurnClickTime) < 350) {
+              editingFurniture = item;
+              rotateSelectedFurniture();
+              lastFurnClickTime = 0;
+              lastFurnClickedItem = null;
+              return;
+            }
+            lastFurnClickTime = now;
+            lastFurnClickedItem = item;
+
             editingFurniture = item;
             isDraggingFurniture = true;
             furnDragStart = { x: (mx - ox) / rScale - item.x, y: (my - oy) / rScale - item.y };
@@ -1713,12 +1978,29 @@
       }
     });
 
-    roomEditorCanvas.addEventListener('mousemove', (e) => {
-      if (isDraggingFurniture && editingFurniture) {
-        const rect = roomEditorCanvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
+    // 더블클릭 회전 바로가기
+    roomEditorCanvas.addEventListener('dblclick', (e) => {
+      if (editingFurniture) {
+        rotateSelectedFurniture();
+      }
+    });
 
+    roomEditorCanvas.addEventListener('mousemove', (e) => {
+      const rect = roomEditorCanvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      // 회전 버튼 호버 커서 피드백
+      if (rotateHandleHitbox && editingFurniture) {
+        const dist = Math.hypot(mx - rotateHandleHitbox.x, my - rotateHandleHitbox.y);
+        if (dist <= rotateHandleHitbox.r) {
+          roomEditorCanvas.style.cursor = "pointer";
+        } else {
+          roomEditorCanvas.style.cursor = isDraggingFurniture ? "move" : "default";
+        }
+      }
+
+      if (isDraggingFurniture && editingFurniture) {
         const pad = 40;
         const rScale = Math.min((roomEditorCanvas.width - pad * 2) / editingRoom.w, (roomEditorCanvas.height - pad * 2) / editingRoom.h);
         const ox = (roomEditorCanvas.width - editingRoom.w * rScale) / 2;
@@ -1740,7 +2022,7 @@
       isDraggingFurniture = false;
     });
 
-    // 📱 내부 꾸미기 캔버스 터치 제스처 (터치 선택, 드래그 이동)
+    // 📱 내부 꾸미기 캔버스 터치 제스처 (터치 선택, 드래그 이동, 회전)
     roomEditorCanvas.addEventListener('touchstart', (e) => {
       if (!editingRoom || !editingRoom.contents || e.touches.length !== 1) return;
       e.preventDefault();
@@ -1748,6 +2030,15 @@
       const t = e.touches[0];
       const mx = t.clientX - rect.left;
       const my = t.clientY - rect.top;
+
+      // 1. 회전 핸들 터치 감지
+      if (rotateHandleHitbox && editingFurniture) {
+        const dist = Math.hypot(mx - rotateHandleHitbox.x, my - rotateHandleHitbox.y);
+        if (dist <= rotateHandleHitbox.r) {
+          rotateSelectedFurniture();
+          return;
+        }
+      }
 
       const pad = 40;
       const rScale = Math.min((roomEditorCanvas.width - pad * 2) / editingRoom.w, (roomEditorCanvas.height - pad * 2) / editingRoom.h);
@@ -1764,6 +2055,18 @@
 
         if (mx >= fx && mx <= fx + fw && my >= fy && my <= fy + fh) {
           hitItem = item;
+          const now = Date.now();
+          // 더블탭 회전 감지 (350ms 이내 재터치)
+          if (lastFurnTappedItem === item && (now - lastFurnTapTime) < 350) {
+            editingFurniture = item;
+            rotateSelectedFurniture();
+            lastFurnTapTime = 0;
+            lastFurnTappedItem = null;
+            return;
+          }
+          lastFurnTapTime = now;
+          lastFurnTappedItem = item;
+
           editingFurniture = item;
           isDraggingFurniture = true;
           furnDragStart = { x: (mx - ox) / rScale - item.x, y: (my - oy) / rScale - item.y };
