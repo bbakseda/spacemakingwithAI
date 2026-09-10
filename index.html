@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Green Smart School CAD Web V19 (Total Freedom)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Three.js 및 OrbitControls CDN (3D 보기용) -->
@@ -10,7 +10,11 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <style>
     * { box-sizing: border-box; }
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      max-height: 100dvh;
       margin: 0;
       padding: 0;
       font-family: "Malgun Gothic", "Dotum", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -19,11 +23,20 @@
       background-color: #212121;
       color: #ffffff;
       overflow: hidden;
+      position: fixed;
+      inset: 0;
     }
     canvas {
       touch-action: none;
       -webkit-touch-callout: none;
       -webkit-user-select: none;
+    }
+    /* 터치 스크롤 최적화 (태블릿/모바일 스크롤 잘림 방지) */
+    .touch-scroll {
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior-y: contain;
+      touch-action: pan-y;
     }
     /* 스크롤바 커스텀 */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -32,30 +45,37 @@
     ::-webkit-scrollbar-thumb:hover { background: #777; }
   </style>
 </head>
-<body class="h-screen w-screen flex flex-col">
+<body class="h-full w-full flex flex-col">
 
   <!-- 1. 최상단 타이틀 & 탭 바 -->
-  <header class="h-10 bg-[#333333] border-b border-[#444444] px-3 flex items-center justify-between flex-shrink-0 z-30">
-    <div class="flex items-center gap-4">
+  <header class="h-10 bg-[#333333] border-b border-[#444444] px-2 sm:px-3 flex items-center justify-between flex-shrink-0 z-30">
+    <div class="flex items-center gap-2 sm:gap-4">
+      <!-- 사이드바 토글 버튼 (태블릿/모바일 필수) -->
+      <button id="btnToggleSidebar" class="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-[#242424] hover:bg-[#383838] active:scale-95 text-xs text-teal-300 border border-teal-500/50 rounded font-bold cursor-pointer transition shadow" title="왼쪽 공간 메뉴 접기/펼치기">
+        <span class="text-sm">☰</span>
+        <span class="text-[11px] sm:text-xs">공간메뉴</span>
+      </button>
+
       <div class="flex items-center gap-1.5 font-bold text-xs text-white tracking-wide">
         <span class="text-teal-400 font-black text-sm">🪶</span>
-        <span>Green Smart School CAD Web V19 (Total Freedom)</span>
+        <span class="hidden md:inline">Green Smart School CAD Web V19 (Total Freedom)</span>
+        <span class="md:hidden">스마트스쿨 CAD</span>
       </div>
       
       <!-- 건물 / 야외 탭 -->
       <div class="flex items-center bg-[#222222] p-0.5 rounded border border-[#444444]">
-        <button id="tabBldg" class="px-3 py-1 text-xs font-bold rounded bg-[#444444] text-white flex items-center gap-1 transition shadow cursor-pointer">
-          🏢 건물 설계
+        <button id="tabBldg" class="px-2.5 sm:px-3 py-1 text-xs font-bold rounded bg-[#444444] text-white flex items-center gap-1 transition shadow cursor-pointer">
+          🏢 <span class="hidden sm:inline">건물 설계</span><span class="sm:hidden">건물</span>
         </button>
-        <button id="tabOut" class="px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer">
-          🌳 야외/조경 설계
+        <button id="tabOut" class="px-2.5 sm:px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer">
+          🌳 <span class="hidden sm:inline">야외/조경 설계</span><span class="sm:hidden">야외</span>
         </button>
       </div>
     </div>
 
     <!-- 우측 창 컨트롤 모의 & 도움말 -->
     <div class="flex items-center gap-2 text-xs text-slate-400">
-      <span class="bg-[#2a2a2a] px-2 py-0.5 rounded text-[11px] text-amber-300 border border-amber-800/40">
+      <span class="bg-[#2a2a2a] px-2 py-0.5 rounded text-[11px] text-amber-300 border border-amber-800/40 hidden lg:inline">
         💡 PC: 휠 줌·우클릭 편집 | 📱 태블릿: 터치 드래그·2손가락 줌·길게눌러 꾸미기
       </span>
     </div>
@@ -165,16 +185,19 @@
   </nav>
 
   <!-- 3. 메인 작업 영역 (좌측 팔레트 + 중앙 CAD 캔버스) -->
-  <div class="flex-1 flex overflow-hidden relative">
+  <div class="flex-1 flex overflow-hidden relative min-h-0 min-w-0">
 
-    <!-- [좌측 사이드바] 공간/기물 추가 팔레트 (폭 180px) -->
-    <aside class="w-48 bg-[#1f1f1f] border-r border-[#333] p-2.5 flex flex-col gap-1.5 flex-shrink-0 z-10 overflow-y-auto">
+    <!-- [좌측 사이드바] 공간/기물 추가 팔레트 (태블릿 잘림 방지 & 접기/펼치기 지원) -->
+    <aside id="mainSidebar" class="w-48 sm:w-52 bg-[#1f1f1f] border-r border-[#333] p-2 sm:p-2.5 flex flex-col gap-1.5 flex-shrink-0 z-20 h-full min-h-0 overflow-y-auto touch-scroll transition-all duration-200">
+      <div class="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1 border-b border-[#333] pb-1">
+        <span id="txtSidebarTitle">공간 모듈 추가</span>
+        <button id="btnCloseSidebar" class="text-slate-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-[#333] text-xs cursor-pointer border border-[#444] transition" title="왼쪽 공간 메뉴 접기">
+          ◀ 접기
+        </button>
+      </div>
+
       <!-- 🏢 건물 패널 -->
       <div id="panelBldg" class="flex flex-col gap-1.5">
-        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 px-1">
-          공간 모듈 추가
-        </div>
-
         <!-- 기본 교실 프리셋 버튼들 (원작 CAD 스펙 완벽 일치) -->
         <button id="btnAddNormal" class="w-full py-2 px-3 bg-[#4a4a4a] hover:bg-[#5a5a5a] text-white text-xs font-semibold rounded text-left flex items-center justify-between transition border border-[#555]">
           <span>+ 일반교실</span>
@@ -262,21 +285,26 @@
         </button>
       </div>
 
-      <!-- 하단 조작 가이드 -->
-      <div class="mt-auto bg-[#292929] p-2.5 rounded border border-[#3a3a3a] text-[11px] text-slate-400 space-y-1">
+      <!-- 하단 조작 가이드 (태블릿 하단에 잘리지 않도록 여유 패딩 확보) -->
+      <div class="mt-auto bg-[#292929] p-2.5 rounded border border-[#3a3a3a] text-[11px] text-slate-400 space-y-1 mb-10 flex-shrink-0">
         <div class="font-bold text-slate-300">⌨️ 단축키 & 📱 터치 안내</div>
-        <div>• 좌클릭 / 터치: 선택 및 이동</div>
+        <div>• 터치/클릭: 선택 및 이동</div>
         <div>• <span class="text-pink-400 font-semibold">자석 스냅</span>: 모서리 자동정렬</div>
-        <div>• <span class="text-cyan-400 font-semibold">우클릭 / 길게누름</span>: 세부 꾸미기</div>
+        <div>• <span class="text-cyan-400 font-semibold">우클릭/길게누름</span>: 세부 꾸미기</div>
         <div>• 2손가락: 핀치 줌 & 패닝</div>
-        <div>• Delete / 하단버튼: 삭제</div>
+        <div>• Delete/하단버튼: 삭제</div>
         <div>• Ctrl+Z: 취소 | Ctrl+S: 저장</div>
       </div>
     </aside>
 
     <!-- [중앙 캔버스] 다크 CAD 그리드 작업창 -->
-    <main id="canvasWrapper" class="flex-1 h-full relative bg-[#212121] overflow-hidden cursor-crosshair">
+    <main id="canvasWrapper" class="flex-1 h-full min-w-0 min-h-0 relative bg-[#212121] overflow-hidden cursor-crosshair">
       <canvas id="cadCanvas" class="w-full h-full block"></canvas>
+
+      <!-- 사이드바 접혔을 때 1-터치로 열 수 있는 플로팅 버튼 -->
+      <button id="btnFloatingOpenSidebar" class="hidden absolute top-3 left-3 bg-[#1f1f1f]/95 hover:bg-[#2e2e2e] text-teal-300 border border-teal-500/60 shadow-2xl px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 z-30 active:scale-95 transition cursor-pointer backdrop-blur">
+        <span>☰ 공간 추가</span>
+      </button>
 
       <!-- 태블릿 & PC 공용: 선택 객체 퀵 액션 바 (화면 하단 중앙 플로팅) -->
       <div id="selectionActionBar" class="absolute bottom-12 left-1/2 -translate-x-1/2 hidden flex items-center gap-2 bg-[#1a2332]/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-teal-500/60 shadow-2xl z-30 transition-all">
@@ -319,11 +347,16 @@
   <!-- ======================================================== -->
 
   <!-- [모달 1] RoomEditor 내부 꾸미기 창 (마우스 우클릭 시 호출) -->
-  <div id="roomEditorModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#f0f0f0] text-slate-900 rounded-xl max-w-4xl w-full h-[90vh] max-h-[700px] shadow-2xl border border-slate-400 flex flex-col overflow-hidden">
+  <div id="roomEditorModal" class="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-[#f0f0f0] text-slate-900 rounded-xl max-w-5xl w-full h-[95vh] sm:h-[90vh] max-h-[760px] shadow-2xl border border-slate-400 flex flex-col overflow-hidden">
       <!-- 헤더 -->
-      <div class="h-10 bg-[#333] px-4 flex items-center justify-between flex-shrink-0 text-white overflow-x-auto whitespace-nowrap">
-        <span id="roomEditorTitle" class="text-xs sm:text-sm font-bold truncate">내부 꾸미기 - 일반교실 (900×750cm)</span>
+      <div class="h-10 bg-[#333] px-3 sm:px-4 flex items-center justify-between flex-shrink-0 text-white overflow-x-auto whitespace-nowrap">
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button id="btnToggleRoomSidebar" class="sm:hidden px-2 py-0.5 bg-[#444] hover:bg-[#555] active:scale-95 text-xs text-amber-300 border border-[#666] rounded font-bold cursor-pointer" title="기물 목록 토글">
+            ☰ 목록
+          </button>
+          <span id="roomEditorTitle" class="text-xs sm:text-sm font-bold truncate">내부 꾸미기 - 일반교실 (900×750cm)</span>
+        </div>
         <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
           <!-- 기물 편집 컨트롤 (태블릿 및 PC 공용) -->
           <button id="btnRotateFurniture" class="hidden px-2.5 py-1 bg-[#475569] hover:bg-[#64748b] active:scale-95 text-xs font-bold rounded text-white flex items-center gap-1 cursor-pointer transition" title="선택된 가구 90도 회전">
@@ -341,9 +374,9 @@
         </div>
       </div>
 
-      <div class="flex-1 flex overflow-hidden">
-        <!-- 좌측 가구/기물 목록 팔레트 (폭 200px) -->
-        <div class="w-52 bg-white border-r border-slate-300 p-3 flex flex-col gap-1.5 overflow-y-auto flex-shrink-0">
+      <div class="flex-1 flex overflow-hidden min-h-0 min-w-0 relative">
+        <!-- 좌측 가구/기물 목록 팔레트 (태블릿 스크롤 최적화) -->
+        <div id="roomEditorSidebar" class="w-48 sm:w-52 bg-white border-r border-slate-300 p-2.5 sm:p-3 flex flex-col gap-1.5 overflow-y-auto touch-scroll flex-shrink-0 h-full min-h-0 pb-10">
           <div class="flex items-center bg-slate-200 p-0.5 rounded text-[11px] font-bold mb-1">
             <button id="tabFurnIndoor" class="flex-1 py-1 text-center rounded bg-white text-slate-800 shadow-xs cursor-pointer">실내 가구</button>
             <button id="tabFurnOutdoor" class="flex-1 py-1 text-center rounded text-slate-500 hover:text-slate-800 cursor-pointer">야외 시설</button>
@@ -440,16 +473,16 @@
             </button>
           </div>
 
-          <div class="mt-auto bg-slate-100 p-2 rounded text-[11px] text-slate-600 leading-relaxed">
+          <div class="mt-auto bg-slate-100 p-2 rounded text-[11px] text-slate-600 leading-relaxed mb-6 flex-shrink-0">
             • <b>이동</b>: 드래그 / 터치 이동<br>
             • <b>회전</b>: 기물 위 <span class="text-blue-600 font-bold">🔄 버튼</span>, 더블탭/클릭, 키보드 <kbd class="px-1 bg-slate-200 rounded font-mono font-bold">R</kbd><br>
             • <b>삭제</b>: 우클릭 또는 [삭제] 버튼
           </div>
         </div>
 
-        <!-- 우측 교실 내부 캔버스 -->
-        <div class="flex-1 h-full p-4 bg-[#e8e8e8] flex items-center justify-center relative">
-          <canvas id="roomEditorCanvas" width="700" height="520" class="bg-white rounded shadow-md border border-slate-300"></canvas>
+        <!-- 우측 교실 내부 캔버스 (태블릿 반응형 적응) -->
+        <div id="roomEditorCanvasWrapper" class="flex-1 h-full min-w-0 min-h-0 p-2 sm:p-4 bg-[#e8e8e8] flex items-center justify-center relative overflow-hidden">
+          <canvas id="roomEditorCanvas" class="bg-white rounded shadow-md border border-slate-300 block max-w-full max-h-full"></canvas>
         </div>
       </div>
     </div>
@@ -1407,22 +1440,25 @@
       const panelOut = document.getElementById('panelOut');
       const navBldgControls = document.getElementById('navBldgControls');
       const navOutControls = document.getElementById('navOutControls');
+      const txtSidebarTitle = document.getElementById('txtSidebarTitle');
 
       if (mode === 'bldg') {
-        tabBldg.className = "px-3 py-1 text-xs font-bold rounded bg-[#444444] text-white flex items-center gap-1 transition shadow cursor-pointer";
-        tabOut.className = "px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer";
+        tabBldg.className = "px-2.5 sm:px-3 py-1 text-xs font-bold rounded bg-[#444444] text-white flex items-center gap-1 transition shadow cursor-pointer";
+        tabOut.className = "px-2.5 sm:px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer";
         panelBldg.classList.remove('hidden');
         panelOut.classList.add('hidden');
         navBldgControls.classList.remove('hidden');
         navOutControls.classList.add('hidden');
+        if (txtSidebarTitle) txtSidebarTitle.innerText = "공간 모듈 추가";
         canvasWrapper.style.backgroundColor = COLOR_BG;
       } else {
-        tabOut.className = "px-3 py-1 text-xs font-bold rounded bg-[#2E4053] text-emerald-300 border border-emerald-600/50 flex items-center gap-1 transition shadow cursor-pointer";
-        tabBldg.className = "px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer";
+        tabOut.className = "px-2.5 sm:px-3 py-1 text-xs font-bold rounded bg-[#2E4053] text-emerald-300 border border-emerald-600/50 flex items-center gap-1 transition shadow cursor-pointer";
+        tabBldg.className = "px-2.5 sm:px-3 py-1 text-xs font-semibold rounded text-slate-400 hover:text-white flex items-center gap-1 transition cursor-pointer";
         panelBldg.classList.add('hidden');
         panelOut.classList.remove('hidden');
         navBldgControls.classList.add('hidden');
         navOutControls.classList.remove('hidden');
+        if (txtSidebarTitle) txtSidebarTitle.innerText = "야외 기물 프리셋";
         canvasWrapper.style.backgroundColor = "#243342";
       }
       selectedRoomId = null;
@@ -1432,6 +1468,33 @@
 
     document.getElementById('tabBldg').onclick = () => switchMode('bldg');
     document.getElementById('tabOut').onclick = () => switchMode('outdoor');
+
+    // 📱 사이드바 접기/펼치기 토글 컨트롤 (태블릿 화면 확보)
+    const mainSidebar = document.getElementById('mainSidebar');
+    const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+    const btnCloseSidebar = document.getElementById('btnCloseSidebar');
+    const btnFloatingOpenSidebar = document.getElementById('btnFloatingOpenSidebar');
+
+    function toggleMainSidebar(show) {
+      if (!mainSidebar) return;
+      if (typeof show === 'boolean') {
+        if (show) {
+          mainSidebar.classList.remove('hidden');
+          if (btnFloatingOpenSidebar) btnFloatingOpenSidebar.classList.add('hidden');
+        } else {
+          mainSidebar.classList.add('hidden');
+          if (btnFloatingOpenSidebar) btnFloatingOpenSidebar.classList.remove('hidden');
+        }
+      } else {
+        const isHidden = mainSidebar.classList.contains('hidden');
+        toggleMainSidebar(isHidden);
+      }
+      setTimeout(resizeCanvas, 30);
+    }
+
+    if (btnToggleSidebar) btnToggleSidebar.onclick = () => toggleMainSidebar();
+    if (btnCloseSidebar) btnCloseSidebar.onclick = () => toggleMainSidebar(false);
+    if (btnFloatingOpenSidebar) btnFloatingOpenSidebar.onclick = () => toggleMainSidebar(true);
 
     // 건물 프리셋 버튼들
     document.getElementById('btnAddNormal').onclick = () => addRoom("일반교실", 900, 750, COLOR_ROOM_BG);
@@ -1564,6 +1627,35 @@
     let lastFurnTapTime = 0;
     let lastFurnTappedItem = null;
 
+    // 📱 내부 꾸미기 캔버스 동적 리사이즈 (태블릿/PC 뷰포트에 완벽 적응)
+    function resizeRoomEditorCanvas() {
+      const wrapper = document.getElementById('roomEditorCanvasWrapper');
+      if (!wrapper || !roomEditorCanvas) return;
+      const rect = wrapper.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const pad = 16;
+      const maxW = Math.max(260, Math.floor(rect.width - pad * 2));
+      const maxH = Math.max(200, Math.floor(rect.height - pad * 2));
+
+      // 기본 700:520 비율 기준으로 하되, editingRoom 비율 반영
+      let aspect = 700 / 520;
+      if (editingRoom && editingRoom.w && editingRoom.h) {
+        aspect = editingRoom.w / editingRoom.h;
+      }
+      let targetW = maxW;
+      let targetH = Math.round(targetW / aspect);
+      if (targetH > maxH) {
+        targetH = maxH;
+        targetW = Math.round(targetH * aspect);
+      }
+
+      roomEditorCanvas.width = Math.max(260, targetW);
+      roomEditorCanvas.height = Math.max(200, targetH);
+      roomEditorCanvas.style.width = roomEditorCanvas.width + 'px';
+      roomEditorCanvas.style.height = roomEditorCanvas.height + 'px';
+    }
+
     function openRoomEditor(room) {
       editingRoom = room;
       editingFurniture = null;
@@ -1574,6 +1666,7 @@
         : `내부 꾸미기 - ${room.name} (${room.w}×${room.h}cm)`;
       showFurnTab(isOut ? 'outdoor' : 'indoor');
       roomEditorModal.classList.remove('hidden');
+      resizeRoomEditorCanvas();
       drawRoomEditor();
     }
 
@@ -1911,6 +2004,19 @@
     document.getElementById('btnSideRotateFurn').onclick = rotateSelectedFurniture;
     document.getElementById('btnDeleteFurniture').onclick = deleteSelectedFurniture;
     document.getElementById('btnSideDeleteFurn').onclick = deleteSelectedFurniture;
+
+    // 모바일/태블릿용 내부꾸미기 기물 사이드바 토글
+    const roomEditorSidebar = document.getElementById('roomEditorSidebar');
+    const btnToggleRoomSidebar = document.getElementById('btnToggleRoomSidebar');
+    if (btnToggleRoomSidebar && roomEditorSidebar) {
+      btnToggleRoomSidebar.onclick = () => {
+        roomEditorSidebar.classList.toggle('hidden');
+        setTimeout(() => {
+          resizeRoomEditorCanvas();
+          drawRoomEditor();
+        }, 30);
+      };
+    }
 
     // 내부 꾸미기 캔버스 인터랙션 (마우스)
     roomEditorCanvas.addEventListener('mousedown', (e) => {
@@ -2458,7 +2564,24 @@
       };
       img.src = "sample_blueprint.png";
     });
-    window.addEventListener('resize', resizeCanvas);
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      if (editingRoom && !roomEditorModal.classList.contains('hidden')) {
+        resizeRoomEditorCanvas();
+        drawRoomEditor();
+      }
+    });
+
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        resizeCanvas();
+        if (editingRoom && !roomEditorModal.classList.contains('hidden')) {
+          resizeRoomEditorCanvas();
+          drawRoomEditor();
+        }
+      }, 150);
+    });
   </script>
 </body>
 </html>
