@@ -15,9 +15,15 @@
       padding: 0;
       font-family: "Malgun Gothic", "Dotum", -apple-system, BlinkMacSystemFont, sans-serif;
       user-select: none;
+      -webkit-user-select: none;
       background-color: #212121;
       color: #ffffff;
       overflow: hidden;
+    }
+    canvas {
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
     }
     /* 스크롤바 커스텀 */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -50,14 +56,14 @@
     <!-- 우측 창 컨트롤 모의 & 도움말 -->
     <div class="flex items-center gap-2 text-xs text-slate-400">
       <span class="bg-[#2a2a2a] px-2 py-0.5 rounded text-[11px] text-amber-300 border border-amber-800/40">
-        💡 마우스 휠: 줌 | 우클릭: 내부 꾸미기
+        💡 PC: 휠 줌·우클릭 편집 | 📱 태블릿: 터치 드래그·2손가락 줌·길게눌러 꾸미기
       </span>
     </div>
   </header>
 
   <!-- 2. 상단 보조 제어 툴바 (건물, 층, 실행취소, 배경, 3D, 저장) -->
-  <nav class="h-10 bg-[#3a3a3a] border-b border-[#2b2b2b] px-3 flex items-center justify-between flex-shrink-0 text-xs text-white z-20">
-    <div class="flex items-center gap-3">
+  <nav class="h-10 bg-[#3a3a3a] border-b border-[#2b2b2b] px-3 flex items-center justify-between flex-shrink-0 text-xs text-white z-20 overflow-x-auto whitespace-nowrap">
+    <div class="flex items-center gap-3 flex-shrink-0">
       <!-- 🏢 건물 모드 전용 컨트롤 그룹 -->
       <div id="navBldgControls" class="flex items-center gap-3">
         <!-- 건물 드롭다운 -->
@@ -145,7 +151,7 @@
     </div>
 
     <!-- 우측 액션 버튼 (그림파일 저장, 프로젝트 저장, 3D 보기) -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-shrink-0 ml-4">
       <button id="btnExportImage" class="bg-[#2e7d32] hover:bg-[#1b5e20] text-white font-bold px-3 py-1 rounded text-xs flex items-center gap-1 shadow cursor-pointer transition" title="현재 도면을 고해상도 PNG 그림 파일로 저장">
         📸 도면 그림(PNG) 저장
       </button>
@@ -258,11 +264,12 @@
 
       <!-- 하단 조작 가이드 -->
       <div class="mt-auto bg-[#292929] p-2.5 rounded border border-[#3a3a3a] text-[11px] text-slate-400 space-y-1">
-        <div class="font-bold text-slate-300">⌨️ 단축키 안내</div>
-        <div>• 좌클릭: 방/기물 선택 및 이동</div>
+        <div class="font-bold text-slate-300">⌨️ 단축키 & 📱 터치 안내</div>
+        <div>• 좌클릭 / 터치: 선택 및 이동</div>
         <div>• <span class="text-pink-400 font-semibold">자석 스냅</span>: 모서리 자동정렬</div>
-        <div>• <span class="text-cyan-400 font-semibold">우클릭</span>: 세부 기물 꾸미기</div>
-        <div>• Delete: 선택된 객체 삭제</div>
+        <div>• <span class="text-cyan-400 font-semibold">우클릭 / 길게누름</span>: 세부 꾸미기</div>
+        <div>• 2손가락: 핀치 줌 & 패닝</div>
+        <div>• Delete / 하단버튼: 삭제</div>
         <div>• Ctrl+Z: 취소 | Ctrl+S: 저장</div>
       </div>
     </aside>
@@ -270,6 +277,23 @@
     <!-- [중앙 캔버스] 다크 CAD 그리드 작업창 -->
     <main id="canvasWrapper" class="flex-1 h-full relative bg-[#212121] overflow-hidden cursor-crosshair">
       <canvas id="cadCanvas" class="w-full h-full block"></canvas>
+
+      <!-- 태블릿 & PC 공용: 선택 객체 퀵 액션 바 (화면 하단 중앙 플로팅) -->
+      <div id="selectionActionBar" class="absolute bottom-12 left-1/2 -translate-x-1/2 hidden flex items-center gap-2 bg-[#1a2332]/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-teal-500/60 shadow-2xl z-30 transition-all">
+        <span id="txtSelectedName" class="text-xs font-bold text-teal-300 mr-1 whitespace-nowrap">교실</span>
+        <button id="btnTouchDecorate" class="px-3 py-1 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-xs rounded-full flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="내부 가구 또는 야외 기물 배치하기">
+          🎨 내부 꾸미기
+        </button>
+        <button id="btnTouchClone" class="px-2.5 py-1 bg-[#334155] hover:bg-[#475569] text-white font-semibold text-xs rounded-full flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="동일한 크기로 복제">
+          📋 복제
+        </button>
+        <button id="btnTouchDelete" class="px-2.5 py-1 bg-[#ef4444] hover:bg-[#dc2626] text-white font-bold text-xs rounded-full flex items-center gap-1 shadow cursor-pointer active:scale-95 transition" title="선택된 공간 삭제">
+          🗑️ 삭제
+        </button>
+        <button id="btnTouchDeselect" class="px-2 py-1 bg-[#475569] hover:bg-[#64748b] text-slate-300 text-xs rounded-full flex items-center gap-0.5 cursor-pointer active:scale-95 transition" title="선택 해제">
+          ✕
+        </button>
+      </div>
 
       <!-- 캔버스 좌측 하단 정보 오버레이 -->
       <div class="absolute bottom-3 left-3 bg-[#111111]/85 backdrop-blur px-3 py-1.5 rounded border border-[#444] text-[11px] font-mono text-slate-300 flex items-center gap-3 pointer-events-none">
@@ -282,9 +306,9 @@
 
       <!-- 캔버스 우측 상단 줌/뷰포트 컨트롤 -->
       <div class="absolute top-3 right-3 flex items-center gap-1 bg-[#222]/90 backdrop-blur p-1 rounded border border-[#444] shadow">
-        <button id="btnZoomIn" class="px-2 py-1 bg-[#333] hover:bg-[#444] rounded text-xs font-bold text-white">+</button>
-        <button id="btnZoomOut" class="px-2 py-1 bg-[#333] hover:bg-[#444] rounded text-xs font-bold text-white">-</button>
-        <button id="btnResetView" class="px-2.5 py-1 bg-[#333] hover:bg-[#444] rounded text-xs font-semibold text-slate-200">뷰 리셋</button>
+        <button id="btnZoomIn" class="px-2.5 py-1 bg-[#333] hover:bg-[#444] active:scale-95 rounded text-sm font-bold text-white cursor-pointer">+</button>
+        <button id="btnZoomOut" class="px-2.5 py-1 bg-[#333] hover:bg-[#444] active:scale-95 rounded text-sm font-bold text-white cursor-pointer">-</button>
+        <button id="btnResetView" class="px-2.5 py-1 bg-[#333] hover:bg-[#444] active:scale-95 rounded text-xs font-semibold text-slate-200 cursor-pointer">뷰 리셋</button>
       </div>
     </main>
 
@@ -296,15 +320,22 @@
 
   <!-- [모달 1] RoomEditor 내부 꾸미기 창 (마우스 우클릭 시 호출) -->
   <div id="roomEditorModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-[#f0f0f0] text-slate-900 rounded-xl max-w-4xl w-full h-[650px] shadow-2xl border border-slate-400 flex flex-col overflow-hidden">
+    <div class="bg-[#f0f0f0] text-slate-900 rounded-xl max-w-4xl w-full h-[90vh] max-h-[700px] shadow-2xl border border-slate-400 flex flex-col overflow-hidden">
       <!-- 헤더 -->
-      <div class="h-10 bg-[#333] px-4 flex items-center justify-between flex-shrink-0 text-white">
-        <span id="roomEditorTitle" class="text-sm font-bold">내부 꾸미기 - 일반교실 (900×750cm)</span>
-        <div class="flex items-center gap-2">
-          <button id="btnCaptureRoomEditor" class="px-2.5 py-1 bg-[#2e7d32] hover:bg-[#1b5e20] text-xs font-bold rounded text-white flex items-center gap-1 cursor-pointer transition" title="내부 배치도 PNG 그림 저장">
+      <div class="h-10 bg-[#333] px-4 flex items-center justify-between flex-shrink-0 text-white overflow-x-auto whitespace-nowrap">
+        <span id="roomEditorTitle" class="text-xs sm:text-sm font-bold truncate">내부 꾸미기 - 일반교실 (900×750cm)</span>
+        <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+          <!-- 기물 편집 컨트롤 (태블릿 및 PC 공용) -->
+          <button id="btnRotateFurniture" class="hidden px-2.5 py-1 bg-[#475569] hover:bg-[#64748b] active:scale-95 text-xs font-bold rounded text-white flex items-center gap-1 cursor-pointer transition" title="선택된 가구 90도 회전">
+            🔄 90° 회전
+          </button>
+          <button id="btnDeleteFurniture" class="hidden px-2.5 py-1 bg-[#dc2626] hover:bg-[#b91c1c] active:scale-95 text-xs font-bold rounded text-white flex items-center gap-1 cursor-pointer transition" title="선택된 가구 삭제">
+            🗑️ 기물 삭제
+          </button>
+          <button id="btnCaptureRoomEditor" class="px-2.5 py-1 bg-[#2e7d32] hover:bg-[#1b5e20] active:scale-95 text-xs font-bold rounded text-white flex items-center gap-1 cursor-pointer transition" title="내부 배치도 PNG 그림 저장">
             📸 배치도 저장
           </button>
-          <button id="btnCloseRoomEditor" class="px-3 py-1 bg-[#555] hover:bg-[#666] text-xs font-semibold rounded cursor-pointer">
+          <button id="btnCloseRoomEditor" class="px-3 py-1 bg-[#555] hover:bg-[#666] active:scale-95 text-xs font-semibold rounded cursor-pointer">
             닫기
           </button>
         </div>
@@ -396,8 +427,8 @@
           </button>
 
           <div class="mt-auto bg-slate-100 p-2 rounded text-[11px] text-slate-500">
-            • 드래그: 가구 위치 이동<br>
-            • 우클릭: 가구 삭제
+            • 터치/드래그: 기물 위치 이동<br>
+            • 기물 선택 후 상단 [회전] 또는 [삭제]
           </div>
         </div>
 
@@ -415,7 +446,7 @@
       <div class="flex items-center gap-2 font-bold text-sm">
         <span class="text-indigo-400">🧊</span>
         <span>Green Smart School 3D 입체 투시도</span>
-        <span class="text-xs font-normal text-slate-400 ml-2">마우스 좌클릭 회전 | 우클릭 패닝 | 휠 줌</span>
+        <span class="text-xs font-normal text-slate-400 ml-2">🖥️ 회전: 드래그 / 줌: 휠 | 📱 터치 회전·2손가락 줌</span>
       </div>
       <div class="flex items-center gap-2">
         <button id="btnCapture3D" class="px-3 py-1 bg-[#2e7d32] hover:bg-[#1b5e20] rounded text-xs font-bold text-white flex items-center gap-1 cursor-pointer transition" title="3D 화면 PNG 그림 저장">
@@ -865,6 +896,79 @@
       }
     });
 
+    // ---------------------------------------------------------
+    // 선택 객체 정보 & 플로팅 액션 바 동기화
+    // ---------------------------------------------------------
+    function updateSelectedInfo(room) {
+      const txtInfo = document.getElementById('txtSelectedInfo');
+      const actionToolbar = document.getElementById('selectionActionBar');
+      const txtSelectedName = document.getElementById('txtSelectedName');
+      const btnDecorate = document.getElementById('btnTouchDecorate');
+
+      if (room) {
+        if (txtInfo) txtInfo.innerText = `선택: ${room.name} (${room.w}×${room.h}cm)`;
+        if (txtSelectedName) txtSelectedName.innerText = `${room.name} (${room.w}×${room.h})`;
+        if (btnDecorate) {
+          const isOut = (room.type === 'out' || currentMode === 'outdoor');
+          btnDecorate.innerHTML = isOut ? "🌳 기물 꾸미기" : "🎨 내부 꾸미기";
+        }
+        if (actionToolbar) actionToolbar.classList.remove('hidden');
+      } else {
+        if (txtInfo) txtInfo.innerText = "선택: 없음";
+        if (actionToolbar) actionToolbar.classList.add('hidden');
+      }
+    }
+
+    // 플로팅 퀵 액션 바 이벤트 리스너 (태블릿 및 PC 공용)
+    document.getElementById('btnTouchDecorate').onclick = () => {
+      if (!selectedRoomId) return;
+      const rooms = (currentMode === "bldg")
+        ? appData.buildings[currentBldg][currentFloor]
+        : appData.outdoor;
+      const target = rooms.find(r => r.id === selectedRoomId);
+      if (target) openRoomEditor(target);
+    };
+
+    document.getElementById('btnTouchClone').onclick = () => {
+      if (!selectedRoomId) return;
+      const rooms = (currentMode === "bldg")
+        ? appData.buildings[currentBldg][currentFloor]
+        : appData.outdoor;
+      const target = rooms.find(r => r.id === selectedRoomId);
+      if (target) {
+        saveState();
+        const cloned = JSON.parse(JSON.stringify(target));
+        cloned.id = Date.now();
+        cloned.x += 100;
+        cloned.y += 100;
+        rooms.push(cloned);
+        selectedRoomId = cloned.id;
+        updateSelectedInfo(cloned);
+        redraw();
+      }
+    };
+
+    document.getElementById('btnTouchDelete').onclick = () => {
+      if (!selectedRoomId) return;
+      saveState();
+      const rooms = (currentMode === "bldg")
+        ? appData.buildings[currentBldg][currentFloor]
+        : appData.outdoor;
+      const idx = rooms.findIndex(r => r.id === selectedRoomId);
+      if (idx !== -1) {
+        rooms.splice(idx, 1);
+        selectedRoomId = null;
+        updateSelectedInfo(null);
+        redraw();
+      }
+    };
+
+    document.getElementById('btnTouchDeselect').onclick = () => {
+      selectedRoomId = null;
+      updateSelectedInfo(null);
+      redraw();
+    };
+
     canvas.addEventListener('mousedown', (e) => {
       const rect = canvasWrapper.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
@@ -892,15 +996,37 @@
           isDraggingRoom = true;
           draggedRoom = clicked;
           dragRoomStart = { mouseX, mouseY, roomX: clicked.x, roomY: clicked.y };
-          document.getElementById('txtSelectedInfo').innerText = `선택: ${clicked.name} (${clicked.w}×${clicked.h}cm)`;
+          updateSelectedInfo(clicked);
         } else {
           // 빈 곳 클릭: 패닝 시작
           isPanning = true;
           panStart = { x: mouseX, y: mouseY };
           selectedRoomId = null;
-          document.getElementById('txtSelectedInfo').innerText = "선택: 없음";
+          updateSelectedInfo(null);
         }
         redraw();
+      }
+    });
+
+    // ✨ 마우스 더블클릭: 내부 꾸미기 창 열기
+    canvas.addEventListener('dblclick', (e) => {
+      const rect = canvasWrapper.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const world = screenToWorld(mouseX, mouseY);
+
+      const rooms = (currentMode === "bldg")
+        ? appData.buildings[currentBldg][currentFloor]
+        : appData.outdoor;
+
+      for (let i = rooms.length - 1; i >= 0; i--) {
+        const r = rooms[i];
+        if (world.x >= r.x && world.x <= r.x + r.w && world.y >= r.y && world.y <= r.y + r.h) {
+          selectedRoomId = r.id;
+          updateSelectedInfo(r);
+          openRoomEditor(r);
+          break;
+        }
       }
     });
 
@@ -927,6 +1053,7 @@
 
       if (targetRoom) {
         selectedRoomId = targetRoom.id;
+        updateSelectedInfo(targetRoom);
         openRoomEditor(targetRoom);
       }
     });
@@ -938,6 +1065,239 @@
       snapGuides = [];
       redraw();
     });
+
+    // ---------------------------------------------------------
+    // 📱 태블릿 터치 제스처 엔진 (1손가락 드래그·스냅, 롱프레스 꾸미기, 더블탭, 2손가락 핀치 줌 & 패닝)
+    // ---------------------------------------------------------
+    let touchStartDist = 0;
+    let touchStartScale = 1;
+    let touchStartPan = { x: 0, y: 0 };
+    let touchCenter = { x: 0, y: 0 };
+    let longPressTimer = null;
+    let lastTapTime = 0;
+    let lastTappedRoomId = null;
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const rect = canvasWrapper.getBoundingClientRect();
+
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        const mouseX = t.clientX - rect.left;
+        const mouseY = t.clientY - rect.top;
+        const world = screenToWorld(mouseX, mouseY);
+
+        const rooms = (currentMode === "bldg")
+          ? appData.buildings[currentBldg][currentFloor]
+          : appData.outdoor;
+
+        let clicked = null;
+        for (let i = rooms.length - 1; i >= 0; i--) {
+          const r = rooms[i];
+          if (world.x >= r.x && world.x <= r.x + r.w && world.y >= r.y && world.y <= r.y + r.h) {
+            clicked = r;
+            break;
+          }
+        }
+
+        if (clicked) {
+          const now = Date.now();
+          // 더블탭 감지 (350ms 이내 동일 객체 탭)
+          if (lastTappedRoomId === clicked.id && (now - lastTapTime) < 350) {
+            clearTimeout(longPressTimer);
+            selectedRoomId = clicked.id;
+            updateSelectedInfo(clicked);
+            openRoomEditor(clicked);
+            lastTapTime = 0;
+            lastTappedRoomId = null;
+            return;
+          }
+          lastTapTime = now;
+          lastTappedRoomId = clicked.id;
+
+          saveState();
+          selectedRoomId = clicked.id;
+          isDraggingRoom = true;
+          draggedRoom = clicked;
+          dragRoomStart = { mouseX, mouseY, roomX: clicked.x, roomY: clicked.y };
+          updateSelectedInfo(clicked);
+
+          // 롱프레스 감지 (약 450ms 유지 시 내부 꾸미기 창 호출)
+          clearTimeout(longPressTimer);
+          longPressTimer = setTimeout(() => {
+            if (isDraggingRoom && draggedRoom && draggedRoom.id === clicked.id) {
+              isDraggingRoom = false;
+              draggedRoom = null;
+              snapGuides = [];
+              if (navigator.vibrate) { try { navigator.vibrate(40); } catch (err) {} }
+              openRoomEditor(clicked);
+            }
+          }, 450);
+
+        } else {
+          // 빈 곳 터치: 패닝 시작 & 선택 해제
+          clearTimeout(longPressTimer);
+          lastTappedRoomId = null;
+          isPanning = true;
+          panStart = { x: mouseX, y: mouseY };
+          selectedRoomId = null;
+          updateSelectedInfo(null);
+        }
+        redraw();
+
+      } else if (e.touches.length === 2) {
+        // 2손가락 핀치 줌 & 패닝 초기화
+        clearTimeout(longPressTimer);
+        isDraggingRoom = false;
+        draggedRoom = null;
+        snapGuides = [];
+        isPanning = false;
+
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        const dx = t1.clientX - t0.clientX;
+        const dy = t1.clientY - t0.clientY;
+        touchStartDist = Math.hypot(dx, dy);
+        touchStartScale = scale;
+        touchStartPan = { x: panOffset.x, y: panOffset.y };
+        touchCenter = {
+          x: ((t0.clientX + t1.clientX) / 2) - rect.left,
+          y: ((t0.clientY + t1.clientY) / 2) - rect.top
+        };
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const rect = canvasWrapper.getBoundingClientRect();
+
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        const mouseX = t.clientX - rect.left;
+        const mouseY = t.clientY - rect.top;
+        const world = screenToWorld(mouseX, mouseY);
+        document.getElementById('txtCursorCoord').innerText = `좌표: X ${Math.round(world.x)}cm, Y ${Math.round(world.y)}cm`;
+
+        if (isPanning) {
+          panOffset.x += mouseX - panStart.x;
+          panOffset.y += mouseY - panStart.y;
+          panStart = { x: mouseX, y: mouseY };
+          redraw();
+          return;
+        }
+
+        if (isDraggingRoom && draggedRoom) {
+          // 8px 이상 이동 시 롱프레스 취소
+          const moveDist = Math.hypot(mouseX - dragRoomStart.mouseX, mouseY - dragRoomStart.mouseY);
+          if (moveDist > 8) {
+            clearTimeout(longPressTimer);
+          }
+
+          const dx = (mouseX - dragRoomStart.mouseX) / scale;
+          const dy = (mouseY - dragRoomStart.mouseY) / scale;
+
+          let targetX = Math.round((dragRoomStart.roomX + dx) / 10) * 10;
+          let targetY = Math.round((dragRoomStart.roomY + dy) / 10) * 10;
+
+          // 자석 스냅(Snap) 계산 (정확도 완벽 일치)
+          snapGuides = [];
+          const snapThresholdCm = 20 / scale;
+          const currentRooms = (currentMode === "bldg")
+            ? appData.buildings[currentBldg][currentFloor]
+            : appData.outdoor;
+
+          currentRooms.forEach(other => {
+            if (other.id === draggedRoom.id) return;
+
+            if (Math.abs(targetX - (other.x + other.w)) < snapThresholdCm) {
+              targetX = other.x + other.w;
+              snapGuides.push({
+                x1: panOffset.x + targetX * scale, y1: 0,
+                x2: panOffset.x + targetX * scale, y2: rect.height
+              });
+            } else if (Math.abs((targetX + draggedRoom.w) - other.x) < snapThresholdCm) {
+              targetX = other.x - draggedRoom.w;
+              snapGuides.push({
+                x1: panOffset.x + other.x * scale, y1: 0,
+                x2: panOffset.x + other.x * scale, y2: rect.height
+              });
+            } else if (Math.abs(targetX - other.x) < snapThresholdCm) {
+              targetX = other.x;
+            }
+
+            if (Math.abs(targetY - (other.y + other.h)) < snapThresholdCm) {
+              targetY = other.y + other.h;
+              snapGuides.push({
+                x1: 0, y1: panOffset.y + targetY * scale,
+                x2: rect.width, y2: panOffset.y + targetY * scale
+              });
+            } else if (Math.abs((targetY + draggedRoom.h) - other.y) < snapThresholdCm) {
+              targetY = other.y - draggedRoom.h;
+              snapGuides.push({
+                x1: 0, y1: panOffset.y + other.y * scale,
+                x2: rect.width, y2: panOffset.y + other.y * scale
+              });
+            } else if (Math.abs(targetY - other.y) < snapThresholdCm) {
+              targetY = other.y;
+            }
+          });
+
+          draggedRoom.x = targetX;
+          draggedRoom.y = targetY;
+          redraw();
+        }
+
+      } else if (e.touches.length === 2) {
+        // 2손가락 핀치 줌 & 패닝 처리
+        clearTimeout(longPressTimer);
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        const dx = t1.clientX - t0.clientX;
+        const dy = t1.clientY - t0.clientY;
+        const currentDist = Math.hypot(dx, dy);
+
+        if (touchStartDist > 0) {
+          const zoomRatio = currentDist / touchStartDist;
+          const targetScale = Math.max(0.05, Math.min(1.5, touchStartScale * zoomRatio));
+
+          const curCenterX = ((t0.clientX + t1.clientX) / 2) - rect.left;
+          const curCenterY = ((t0.clientY + t1.clientY) / 2) - rect.top;
+
+          const worldCenter = {
+            x: (touchCenter.x - touchStartPan.x) / touchStartScale,
+            y: (touchCenter.y - touchStartPan.y) / touchStartScale
+          };
+
+          scale = targetScale;
+          panOffset.x = curCenterX - worldCenter.x * scale;
+          panOffset.y = curCenterY - worldCenter.y * scale;
+
+          document.getElementById('txtScaleInfo').innerText = `스케일: 1cm = ${scale.toFixed(2)}px`;
+          redraw();
+        }
+      }
+    }, { passive: false });
+
+    function handleTouchEnd(e) {
+      clearTimeout(longPressTimer);
+      if (e.touches.length === 0) {
+        isDraggingRoom = false;
+        draggedRoom = null;
+        isPanning = false;
+        snapGuides = [];
+        redraw();
+      } else if (e.touches.length === 1) {
+        // 2손가락에서 1손가락으로 전환된 경우 패닝 모드로 자연스럽게 복귀
+        const rect = canvasWrapper.getBoundingClientRect();
+        const t = e.touches[0];
+        panStart = { x: t.clientX - rect.left, y: t.clientY - rect.top };
+        isPanning = true;
+        isDraggingRoom = false;
+        draggedRoom = null;
+      }
+    }
+    canvas.addEventListener('touchend', handleTouchEnd);
+    canvas.addEventListener('touchcancel', handleTouchEnd);
 
     // 마우스 휠 줌
     canvas.addEventListener('wheel', (e) => {
@@ -967,6 +1327,7 @@
         if (idx !== -1) {
           rooms.splice(idx, 1);
           selectedRoomId = null;
+          updateSelectedInfo(null);
           redraw();
         }
       }
@@ -1002,6 +1363,7 @@
         appData.outdoor.push(newRoom);
       }
       selectedRoomId = newRoom.id;
+      updateSelectedInfo(newRoom);
       redraw();
     }
 
@@ -1033,7 +1395,7 @@
         canvasWrapper.style.backgroundColor = "#243342";
       }
       selectedRoomId = null;
-      document.getElementById('txtSelectedInfo').innerText = "선택: 없음";
+      updateSelectedInfo(null);
       redraw();
     }
 
@@ -1168,6 +1530,8 @@
 
     function openRoomEditor(room) {
       editingRoom = room;
+      editingFurniture = null;
+      updateFurnitureToolbar(null);
       const isOut = (room.type === 'out' || currentMode === 'outdoor');
       document.getElementById('roomEditorTitle').innerText = isOut
         ? `야외 기물 세부 배치 - ${room.name} (${room.w}×${room.h}cm)`
@@ -1269,7 +1633,42 @@
       drawRoomEditor();
     }
 
-    // 내부 꾸미기 캔버스 드래그
+    // RoomEditor 상단 툴바 (회전 & 삭제) 동기화
+    function updateFurnitureToolbar(item) {
+      const btnRot = document.getElementById('btnRotateFurniture');
+      const btnDel = document.getElementById('btnDeleteFurniture');
+      if (item) {
+        btnRot.classList.remove('hidden');
+        btnDel.classList.remove('hidden');
+        btnDel.innerText = `🗑️ '${item.name}' 삭제`;
+      } else {
+        btnRot.classList.add('hidden');
+        btnDel.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('btnRotateFurniture').onclick = () => {
+      if (editingFurniture) {
+        const tmp = editingFurniture.w;
+        editingFurniture.w = editingFurniture.h;
+        editingFurniture.h = tmp;
+        drawRoomEditor();
+      }
+    };
+
+    document.getElementById('btnDeleteFurniture').onclick = () => {
+      if (editingFurniture && editingRoom && editingRoom.contents) {
+        const idx = editingRoom.contents.findIndex(f => f === editingFurniture);
+        if (idx !== -1) {
+          editingRoom.contents.splice(idx, 1);
+          editingFurniture = null;
+          updateFurnitureToolbar(null);
+          drawRoomEditor();
+        }
+      }
+    };
+
+    // 내부 꾸미기 캔버스 드래그 (마우스)
     roomEditorCanvas.addEventListener('mousedown', (e) => {
       if (!editingRoom || !editingRoom.contents) return;
       const rect = roomEditorCanvas.getBoundingClientRect();
@@ -1281,6 +1680,7 @@
       const ox = (roomEditorCanvas.width - editingRoom.w * rScale) / 2;
       const oy = (roomEditorCanvas.height - editingRoom.h * rScale) / 2;
 
+      let hitItem = null;
       for (let i = editingRoom.contents.length - 1; i >= 0; i--) {
         const item = editingRoom.contents[i];
         const fx = ox + item.x * rScale;
@@ -1289,18 +1689,27 @@
         const fh = item.h * rScale;
 
         if (mx >= fx && mx <= fx + fw && my >= fy && my <= fy + fh) {
+          hitItem = item;
           if (e.button === 0) {
             editingFurniture = item;
             isDraggingFurniture = true;
             furnDragStart = { x: (mx - ox) / rScale - item.x, y: (my - oy) / rScale - item.y };
+            updateFurnitureToolbar(item);
           } else if (e.button === 2) {
             // 우클릭 삭제
             editingRoom.contents.splice(i, 1);
             editingFurniture = null;
+            updateFurnitureToolbar(null);
           }
           drawRoomEditor();
-          break;
+          return;
         }
+      }
+
+      if (!hitItem) {
+        editingFurniture = null;
+        updateFurnitureToolbar(null);
+        drawRoomEditor();
       }
     });
 
@@ -1328,6 +1737,74 @@
     });
 
     window.addEventListener('mouseup', () => {
+      isDraggingFurniture = false;
+    });
+
+    // 📱 내부 꾸미기 캔버스 터치 제스처 (터치 선택, 드래그 이동)
+    roomEditorCanvas.addEventListener('touchstart', (e) => {
+      if (!editingRoom || !editingRoom.contents || e.touches.length !== 1) return;
+      e.preventDefault();
+      const rect = roomEditorCanvas.getBoundingClientRect();
+      const t = e.touches[0];
+      const mx = t.clientX - rect.left;
+      const my = t.clientY - rect.top;
+
+      const pad = 40;
+      const rScale = Math.min((roomEditorCanvas.width - pad * 2) / editingRoom.w, (roomEditorCanvas.height - pad * 2) / editingRoom.h);
+      const ox = (roomEditorCanvas.width - editingRoom.w * rScale) / 2;
+      const oy = (roomEditorCanvas.height - editingRoom.h * rScale) / 2;
+
+      let hitItem = null;
+      for (let i = editingRoom.contents.length - 1; i >= 0; i--) {
+        const item = editingRoom.contents[i];
+        const fx = ox + item.x * rScale;
+        const fy = oy + item.y * rScale;
+        const fw = item.w * rScale;
+        const fh = item.h * rScale;
+
+        if (mx >= fx && mx <= fx + fw && my >= fy && my <= fy + fh) {
+          hitItem = item;
+          editingFurniture = item;
+          isDraggingFurniture = true;
+          furnDragStart = { x: (mx - ox) / rScale - item.x, y: (my - oy) / rScale - item.y };
+          updateFurnitureToolbar(item);
+          drawRoomEditor();
+          return;
+        }
+      }
+
+      if (!hitItem) {
+        editingFurniture = null;
+        updateFurnitureToolbar(null);
+        drawRoomEditor();
+      }
+    }, { passive: false });
+
+    roomEditorCanvas.addEventListener('touchmove', (e) => {
+      if (!isDraggingFurniture || !editingFurniture || e.touches.length !== 1) return;
+      e.preventDefault();
+      const rect = roomEditorCanvas.getBoundingClientRect();
+      const t = e.touches[0];
+      const mx = t.clientX - rect.left;
+      const my = t.clientY - rect.top;
+
+      const pad = 40;
+      const rScale = Math.min((roomEditorCanvas.width - pad * 2) / editingRoom.w, (roomEditorCanvas.height - pad * 2) / editingRoom.h);
+      const ox = (roomEditorCanvas.width - editingRoom.w * rScale) / 2;
+      const oy = (roomEditorCanvas.height - editingRoom.h * rScale) / 2;
+
+      let nx = (mx - ox) / rScale - furnDragStart.x;
+      let ny = (my - oy) / rScale - furnDragStart.y;
+
+      nx = Math.max(0, Math.min(editingRoom.w - editingFurniture.w, nx));
+      ny = Math.max(0, Math.min(editingRoom.h - editingFurniture.h, ny));
+
+      editingFurniture.x = Math.round(nx);
+      editingFurniture.y = Math.round(ny);
+      drawRoomEditor();
+    }, { passive: false });
+
+    roomEditorCanvas.addEventListener('touchend', () => {
       isDraggingFurniture = false;
     });
 
@@ -1627,25 +2104,47 @@
     };
 
     // 줌/리셋 버튼
-    document.getElementById('btnZoomIn').onclick = () => { scale = Math.min(1.5, scale * 1.2); redraw(); };
-    document.getElementById('btnZoomOut').onclick = () => { scale = Math.max(0.05, scale * 0.8); redraw(); };
-    document.getElementById('btnResetView').onclick = () => { scale = 0.22; panOffset = { x: 80, y: 60 }; redraw(); };
+    document.getElementById('btnZoomIn').onclick = () => {
+      scale = Math.min(1.5, scale * 1.2);
+      document.getElementById('txtScaleInfo').innerText = `스케일: 1cm = ${scale.toFixed(2)}px`;
+      redraw();
+    };
+    document.getElementById('btnZoomOut').onclick = () => {
+      scale = Math.max(0.05, scale * 0.8);
+      document.getElementById('txtScaleInfo').innerText = `스케일: 1cm = ${scale.toFixed(2)}px`;
+      redraw();
+    };
+    document.getElementById('btnResetView').onclick = () => {
+      scale = 0.22;
+      panOffset = { x: 80, y: 60 };
+      document.getElementById('txtScaleInfo').innerText = `스케일: 1cm = ${scale.toFixed(2)}px`;
+      redraw();
+    };
 
     // 층 및 건물 변경 이벤트
     document.querySelectorAll('input[name="floor"]').forEach(radio => {
       radio.onchange = (e) => {
         currentFloor = parseInt(e.target.value);
+        selectedRoomId = null;
+        updateSelectedInfo(null);
         redraw();
       };
     });
     document.getElementById('selBuilding').onchange = (e) => {
       currentBldg = e.target.value;
+      selectedRoomId = null;
+      updateSelectedInfo(null);
       redraw();
     };
 
-    // 윈도우 리사이즈
+    // 윈도우 리사이즈 및 초기화
     window.addEventListener('load', () => {
       resizeCanvas();
+      const firstRoom = appData.buildings[currentBldg][currentFloor]?.[0];
+      if (firstRoom) {
+        selectedRoomId = firstRoom.id;
+        updateSelectedInfo(firstRoom);
+      }
       // 기본 샘플 도면 자동 로드
       const img = new Image();
       img.onload = () => {
